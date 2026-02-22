@@ -317,6 +317,204 @@
     }
     .scroll-top.show { opacity: 1; transform: translateY(0); }
     .scroll-top:hover { transform: translateY(-3px); }
+
+    /* ── Modal Overlay ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; visibility: hidden;
+      transition: all 0.3s ease;
+      padding: 24px;
+    }
+    .modal-overlay.open { opacity: 1; visibility: visible; }
+    .modal-overlay.open .modal { transform: translateY(0) scale(1); opacity: 1; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      max-width: 720px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(30px) scale(0.96);
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .modal::-webkit-scrollbar { width: 6px; }
+    .modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .modal-banner {
+      height: 140px;
+      border-radius: 20px 20px 0 0;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .modal-banner::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, var(--surface) 100%);
+    }
+    .modal-banner-icon {
+      font-size: 4rem;
+      z-index: 1;
+      filter: drop-shadow(0 4px 20px rgba(0,0,0,0.4));
+    }
+
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.15); }
+
+    .modal-body { padding: 0 32px 32px; }
+
+    .modal-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+    .modal-subtitle {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      margin-bottom: 20px;
+    }
+
+    .modal-desc {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: #d4d4d8;
+      margin-bottom: 28px;
+      border-left: 3px solid var(--accent);
+      padding-left: 16px;
+    }
+
+    .modal-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .modal-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .meta-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .meta-card-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .meta-card-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .modal-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      font-size: 0.88rem;
+      color: #d4d4d8;
+    }
+    .feature-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .modal-tech {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .tech-badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(99,102,241,0.1);
+      color: #818cf8;
+      border: 1px solid rgba(99,102,241,0.2);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-launch {
+      flex: 1;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      text-decoration: none;
+      min-width: 200px;
+    }
+    .btn-launch:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+    .btn-launch-primary {
+      background: var(--accent);
+    }
+    .btn-launch-primary:hover { background: #4f46e5; }
+    .btn-launch-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-launch-secondary:hover { border-color: var(--accent); color: #818cf8; }
+
+    @media (max-width: 640px) {
+      .modal-features { grid-template-columns: 1fr; }
+      .modal-body { padding: 0 20px 24px; }
+      .modal-banner { height: 100px; }
+      .modal-title { font-size: 1.4rem; }
+      .modal-actions { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
@@ -362,6 +560,14 @@
     <div class="grid" id="projectGrid"></div>
   </div>
 
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <div id="modalInner"></div>
+    </div>
+  </div>
+
   <!-- Scroll to top -->
   <button class="scroll-top" id="scrollTop" title="Scroll to top">&#8593;</button>
 
@@ -374,112 +580,112 @@
 // ── Project Data ──────────────────────────────────────────────
 const projects = [
   // ═══ ORIGINAL 10 — Enterprise SaaS (ports 3100-3109) ═══
-  { id: 1,  dir: "01-InvoiceFlow",     name: "InvoiceFlow",     port: 3100, icon: "🧾", gradient: "linear-gradient(135deg,#6366f1,#8b5cf6)", cat: "enterprise", desc: "Automated invoice processing and payment tracking for businesses of all sizes." },
-  { id: 2,  dir: "02-TaskForge",       name: "TaskForge",       port: 3101, icon: "⚡", gradient: "linear-gradient(135deg,#f59e0b,#ef4444)", cat: "enterprise", desc: "Advanced project management with real-time collaboration and sprint planning." },
-  { id: 3,  dir: "03-SalesPipe",       name: "SalesPipe",       port: 3102, icon: "📊", gradient: "linear-gradient(135deg,#10b981,#059669)", cat: "enterprise", desc: "Visual sales pipeline management with deal tracking and revenue forecasting." },
-  { id: 4,  dir: "04-StockSync",       name: "StockSync",       port: 3103, icon: "📦", gradient: "linear-gradient(135deg,#3b82f6,#1d4ed8)", cat: "enterprise", desc: "Real-time inventory synchronization across warehouses and sales channels." },
-  { id: 5,  dir: "05-TeamHub",         name: "TeamHub",         port: 3104, icon: "👥", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", cat: "enterprise", desc: "All-in-one team communication hub with channels, threads, and video calls." },
-  { id: 6,  dir: "06-BookEase",        name: "BookEase",        port: 3105, icon: "📅", gradient: "linear-gradient(135deg,#ec4899,#db2777)", cat: "enterprise", desc: "Smart appointment booking system with calendar sync and automated reminders." },
-  { id: 7,  dir: "07-MarketNest",      name: "MarketNest",      port: 3106, icon: "🏪", gradient: "linear-gradient(135deg,#14b8a6,#0d9488)", cat: "enterprise", desc: "Multi-vendor marketplace platform with vendor analytics and commission management." },
-  { id: 8,  dir: "08-LearnPath",       name: "LearnPath",       port: 3107, icon: "🎓", gradient: "linear-gradient(135deg,#f97316,#ea580c)", cat: "education",   desc: "Personalized learning management system with progress tracking and certifications." },
-  { id: 9,  dir: "09-PropManager",     name: "PropManager",     port: 3108, icon: "🏠", gradient: "linear-gradient(135deg,#06b6d4,#0891b2)", cat: "enterprise", desc: "Property management platform for landlords with tenant portal and maintenance tracking." },
-  { id: 10, dir: "10-OrderBite",       name: "OrderBite",       port: 3109, icon: "🍔", gradient: "linear-gradient(135deg,#ef4444,#dc2626)", cat: "enterprise", desc: "Restaurant order management with real-time kitchen display and delivery tracking." },
+  { id: 1,  dir: "01-InvoiceFlow",     name: "InvoiceFlow",     port: 3100, icon: "🧾", gradient: "linear-gradient(135deg,#6366f1,#8b5cf6)", cat: "enterprise", desc: "Automated invoice processing and payment tracking for businesses of all sizes.", features: ["Auto-generate & send invoices","Payment status tracking","Multi-currency support","Recurring billing","Tax calculation engine","Client portal"] },
+  { id: 2,  dir: "02-TaskForge",       name: "TaskForge",       port: 3101, icon: "⚡", gradient: "linear-gradient(135deg,#f59e0b,#ef4444)", cat: "enterprise", desc: "Advanced project management with real-time collaboration and sprint planning.", features: ["Kanban & Gantt views","Sprint planning","Time tracking","Team workload balancer","File sharing","Activity timeline"] },
+  { id: 3,  dir: "03-SalesPipe",       name: "SalesPipe",       port: 3102, icon: "📊", gradient: "linear-gradient(135deg,#10b981,#059669)", cat: "enterprise", desc: "Visual sales pipeline management with deal tracking and revenue forecasting.", features: ["Drag-drop deal stages","Revenue forecasting","Lead scoring","Email integration","Win/loss analytics","Team leaderboard"] },
+  { id: 4,  dir: "04-StockSync",       name: "StockSync",       port: 3103, icon: "📦", gradient: "linear-gradient(135deg,#3b82f6,#1d4ed8)", cat: "enterprise", desc: "Real-time inventory synchronization across warehouses and sales channels.", features: ["Multi-warehouse sync","Low-stock alerts","Barcode scanning","Order routing","Demand forecasting","Supplier management"] },
+  { id: 5,  dir: "05-TeamHub",         name: "TeamHub",         port: 3104, icon: "👥", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", cat: "enterprise", desc: "All-in-one team communication hub with channels, threads, and video calls.", features: ["Channels & threads","Video conferencing","Screen sharing","File collaboration","Status updates","Integrations hub"] },
+  { id: 6,  dir: "06-BookEase",        name: "BookEase",        port: 3105, icon: "📅", gradient: "linear-gradient(135deg,#ec4899,#db2777)", cat: "enterprise", desc: "Smart appointment booking system with calendar sync and automated reminders.", features: ["Online scheduling","Calendar sync","SMS/email reminders","Staff management","Payment collection","Custom booking pages"] },
+  { id: 7,  dir: "07-MarketNest",      name: "MarketNest",      port: 3106, icon: "🏪", gradient: "linear-gradient(135deg,#14b8a6,#0d9488)", cat: "enterprise", desc: "Multi-vendor marketplace platform with vendor analytics and commission management.", features: ["Vendor onboarding","Commission tracking","Product catalog","Order management","Review system","Payout automation"] },
+  { id: 8,  dir: "08-LearnPath",       name: "LearnPath",       port: 3107, icon: "🎓", gradient: "linear-gradient(135deg,#f97316,#ea580c)", cat: "education",   desc: "Personalized learning management system with progress tracking and certifications.", features: ["Course builder","Progress tracking","Quizzes & exams","Certificates","Discussion forums","Analytics dashboard"] },
+  { id: 9,  dir: "09-PropManager",     name: "PropManager",     port: 3108, icon: "🏠", gradient: "linear-gradient(135deg,#06b6d4,#0891b2)", cat: "enterprise", desc: "Property management platform for landlords with tenant portal and maintenance tracking.", features: ["Tenant portal","Rent collection","Maintenance requests","Lease management","Property listings","Financial reports"] },
+  { id: 10, dir: "10-OrderBite",       name: "OrderBite",       port: 3109, icon: "🍔", gradient: "linear-gradient(135deg,#ef4444,#dc2626)", cat: "enterprise", desc: "Restaurant order management with real-time kitchen display and delivery tracking.", features: ["Online ordering","Kitchen display","Delivery tracking","Menu management","Table reservations","POS integration"] },
 
   // ═══ FRESH IDEAS 01-10 — Innovative Tech (ports 3000-3009) ═══
-  { id: 11, dir: "01-DeepFakeShield",  name: "DeepFakeShield",  port: 3000, icon: "🛡️", gradient: "linear-gradient(135deg,#ef4444,#7c3aed)", cat: "ai",       desc: "AI-powered deepfake detection platform that verifies media authenticity in real time." },
-  { id: 12, dir: "02-CarbonLedger",    name: "CarbonLedger",    port: 3001, icon: "🌍", gradient: "linear-gradient(135deg,#10b981,#065f46)", cat: "sustainability", desc: "Blockchain-backed carbon credit tracking and emissions accounting for enterprises." },
-  { id: 13, dir: "03-PromptVault",     name: "PromptVault",     port: 3002, icon: "🔐", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", cat: "ai",       desc: "Secure prompt engineering workspace with version control and team collaboration." },
-  { id: 14, dir: "04-QuietQuit",       name: "QuietQuit",       port: 3003, icon: "📉", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", cat: "enterprise", desc: "Employee engagement analytics that detects disengagement patterns before they escalate." },
-  { id: 15, dir: "05-RightOfWay",      name: "RightOfWay",      port: 3004, icon: "⚖️", gradient: "linear-gradient(135deg,#64748b,#334155)", cat: "community", desc: "Digital rights management platform ensuring fair content creator compensation." },
-  { id: 16, dir: "06-SplitShip",       name: "SplitShip",       port: 3005, icon: "📦", gradient: "linear-gradient(135deg,#f97316,#c2410c)", cat: "enterprise", desc: "Collaborative shipping that splits delivery costs by matching nearby orders." },
-  { id: 17, dir: "07-ClauseHound",     name: "ClauseHound",     port: 3006, icon: "📜", gradient: "linear-gradient(135deg,#8b5cf6,#5b21b6)", cat: "ai",       desc: "AI contract analyzer that flags risky clauses and suggests fairer alternatives." },
-  { id: 18, dir: "08-MeshPay",         name: "MeshPay",         port: 3007, icon: "💸", gradient: "linear-gradient(135deg,#22d3ee,#0e7490)", cat: "finance",   desc: "Decentralized peer-to-peer payment mesh network with zero-fee micro-transactions." },
-  { id: 19, dir: "09-SpectrumAI",      name: "SpectrumAI",      port: 3008, icon: "🧠", gradient: "linear-gradient(135deg,#a855f7,#7c3aed)", cat: "ai",       desc: "Neurodiversity-focused AI tools that adapt interfaces for different cognitive styles." },
-  { id: 20, dir: "10-TwinOps",         name: "TwinOps",         port: 3009, icon: "🏭", gradient: "linear-gradient(135deg,#14b8a6,#0f766e)", cat: "enterprise", desc: "Digital twin operations platform for real-time facility simulation and optimization." },
+  { id: 11, dir: "01-DeepFakeShield",  name: "DeepFakeShield",  port: 3000, icon: "🛡️", gradient: "linear-gradient(135deg,#ef4444,#7c3aed)", cat: "ai",       desc: "AI-powered deepfake detection platform that verifies media authenticity in real time.", features: ["Video deepfake detection","Image forensic analysis","Audio authenticity check","Confidence scoring","Batch processing","API integration"] },
+  { id: 12, dir: "02-CarbonLedger",    name: "CarbonLedger",    port: 3001, icon: "🌍", gradient: "linear-gradient(135deg,#10b981,#065f46)", cat: "sustainability", desc: "Blockchain-backed carbon credit tracking and emissions accounting for enterprises.", features: ["Emissions calculator","Carbon credit marketplace","Blockchain verification","Compliance reports","Supply chain tracking","ESG dashboard"] },
+  { id: 13, dir: "03-PromptVault",     name: "PromptVault",     port: 3002, icon: "🔐", gradient: "linear-gradient(135deg,#6366f1,#4f46e5)", cat: "ai",       desc: "Secure prompt engineering workspace with version control and team collaboration.", features: ["Prompt version control","Team sharing","A/B testing prompts","Model comparison","Usage analytics","Template library"] },
+  { id: 14, dir: "04-QuietQuit",       name: "QuietQuit",       port: 3003, icon: "📉", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", cat: "enterprise", desc: "Employee engagement analytics that detects disengagement patterns before they escalate.", features: ["Engagement pulse surveys","Pattern detection","Risk scoring","Manager alerts","Trend analytics","Action recommendations"] },
+  { id: 15, dir: "05-RightOfWay",      name: "RightOfWay",      port: 3004, icon: "⚖️", gradient: "linear-gradient(135deg,#64748b,#334155)", cat: "community", desc: "Digital rights management platform ensuring fair content creator compensation.", features: ["Content licensing","Royalty tracking","Usage monitoring","Fair pay calculator","Dispute resolution","Creator dashboard"] },
+  { id: 16, dir: "06-SplitShip",       name: "SplitShip",       port: 3005, icon: "📦", gradient: "linear-gradient(135deg,#f97316,#c2410c)", cat: "enterprise", desc: "Collaborative shipping that splits delivery costs by matching nearby orders.", features: ["Order matching","Cost splitting","Route optimization","Real-time tracking","Delivery scheduling","Savings calculator"] },
+  { id: 17, dir: "07-ClauseHound",     name: "ClauseHound",     port: 3006, icon: "📜", gradient: "linear-gradient(135deg,#8b5cf6,#5b21b6)", cat: "ai",       desc: "AI contract analyzer that flags risky clauses and suggests fairer alternatives.", features: ["Clause risk scoring","Plain English summaries","Comparison tool","Suggestion engine","Template library","Bulk analysis"] },
+  { id: 18, dir: "08-MeshPay",         name: "MeshPay",         port: 3007, icon: "💸", gradient: "linear-gradient(135deg,#22d3ee,#0e7490)", cat: "finance",   desc: "Decentralized peer-to-peer payment mesh network with zero-fee micro-transactions.", features: ["Instant P2P transfers","Zero fees","Multi-currency","Payment routing","Transaction history","QR code payments"] },
+  { id: 19, dir: "09-SpectrumAI",      name: "SpectrumAI",      port: 3008, icon: "🧠", gradient: "linear-gradient(135deg,#a855f7,#7c3aed)", cat: "ai",       desc: "Neurodiversity-focused AI tools that adapt interfaces for different cognitive styles.", features: ["Cognitive profiling","Adaptive UI","Focus modes","Sensory settings","Communication aids","Progress tracking"] },
+  { id: 20, dir: "10-TwinOps",         name: "TwinOps",         port: 3009, icon: "🏭", gradient: "linear-gradient(135deg,#14b8a6,#0f766e)", cat: "enterprise", desc: "Digital twin operations platform for real-time facility simulation and optimization.", features: ["3D facility models","Real-time simulation","Predictive maintenance","Energy optimization","Scenario planning","IoT integration"] },
 
   // ═══ FRESH IDEAS 11-40 — People-First Apps (ports 3010-3039) ═══
-  { id: 21, dir: "11-SleepSync",       name: "SleepSync",       port: 3010, icon: "😴", gradient: "linear-gradient(135deg,#6366f1,#4338ca)", cat: "health",    desc: "Smart sleep optimizer that syncs with your circadian rhythm and environment sensors." },
-  { id: 22, dir: "12-MealMind",        name: "MealMind",        port: 3011, icon: "🥗", gradient: "linear-gradient(135deg,#22c55e,#15803d)", cat: "health",    desc: "AI nutrition planner that adapts meals to your health goals, allergies, and budget." },
-  { id: 23, dir: "13-FocusForge",      name: "FocusForge",      port: 3012, icon: "🎯", gradient: "linear-gradient(135deg,#f59e0b,#b45309)", cat: "productivity", desc: "Deep work timer with distraction blocking, flow state tracking, and focus analytics." },
-  { id: 24, dir: "14-BillSplit",       name: "BillSplit",       port: 3013, icon: "💰", gradient: "linear-gradient(135deg,#10b981,#047857)", cat: "finance",   desc: "Smart bill splitting that handles complex scenarios — itemized, tax, tip, and IOUs." },
-  { id: 25, dir: "15-SkillTree",       name: "SkillTree",       port: 3014, icon: "🌳", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", cat: "education", desc: "Gamified skill development with branching paths, XP, and community mentorship." },
-  { id: 26, dir: "16-SafeWalk",        name: "SafeWalk",        port: 3015, icon: "🚶", gradient: "linear-gradient(135deg,#ef4444,#b91c1c)", cat: "community", desc: "Real-time safe route finder with crowd-sourced incident reports and live escort matching." },
-  { id: 27, dir: "17-PlantPal",        name: "PlantPal",        port: 3016, icon: "🌱", gradient: "linear-gradient(135deg,#22c55e,#166534)", cat: "lifestyle", desc: "Smart plant care companion with species identification, watering schedules, and disease detection." },
-  { id: 28, dir: "18-MemoryVault",     name: "MemoryVault",     port: 3017, icon: "📸", gradient: "linear-gradient(135deg,#ec4899,#be185d)", cat: "lifestyle", desc: "AI-organized digital memory vault that curates and resurfaces meaningful moments." },
-  { id: 29, dir: "19-PriceHawk",       name: "PriceHawk",       port: 3018, icon: "🦅", gradient: "linear-gradient(135deg,#f97316,#c2410c)", cat: "finance",   desc: "Real-time price tracker across stores with deal alerts and price history charts." },
-  { id: 30, dir: "20-NeighborNet",     name: "NeighborNet",     port: 3019, icon: "🏘️", gradient: "linear-gradient(135deg,#3b82f6,#1d4ed8)", cat: "community", desc: "Hyperlocal community network for sharing resources, skills, and neighborhood updates." },
-  { id: 31, dir: "21-DocuSafe",        name: "DocuSafe",        port: 3020, icon: "🔒", gradient: "linear-gradient(135deg,#64748b,#334155)", cat: "productivity", desc: "Encrypted document vault with smart organization, expiry alerts, and secure sharing." },
-  { id: 32, dir: "22-HabitLoop",       name: "HabitLoop",       port: 3021, icon: "🔄", gradient: "linear-gradient(135deg,#a855f7,#7c3aed)", cat: "health",    desc: "Behavioral habit tracker with streak mechanics, triggers analysis, and reward loops." },
-  { id: 33, dir: "23-TransLive",       name: "TransLive",       port: 3022, icon: "🌐", gradient: "linear-gradient(135deg,#06b6d4,#0891b2)", cat: "ai",       desc: "Real-time speech translation for meetings with 50+ languages and context awareness." },
-  { id: 34, dir: "24-WellCheck",       name: "WellCheck",       port: 3023, icon: "❤️", gradient: "linear-gradient(135deg,#ef4444,#dc2626)", cat: "health",    desc: "Daily wellness check-in with mood tracking, symptom journaling, and trend analysis." },
-  { id: 35, dir: "25-BudgetBrain",     name: "BudgetBrain",     port: 3024, icon: "🧮", gradient: "linear-gradient(135deg,#10b981,#059669)", cat: "finance",   desc: "AI-powered budget planner that learns spending patterns and suggests smart savings." },
-  { id: 36, dir: "26-RepairHub",       name: "RepairHub",       port: 3025, icon: "🔧", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", cat: "community", desc: "Community repair marketplace connecting fixers with people who need things repaired." },
-  { id: 37, dir: "27-TimeBank",        name: "TimeBank",        port: 3026, icon: "⏰", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", cat: "community", desc: "Time-based community currency — exchange hours of service instead of money." },
-  { id: 38, dir: "28-EcoTrack",        name: "EcoTrack",        port: 3027, icon: "♻️", gradient: "linear-gradient(135deg,#22c55e,#15803d)", cat: "sustainability", desc: "Personal carbon footprint tracker with actionable reduction tips and impact visualization." },
-  { id: 39, dir: "29-StudyBuddy",      name: "StudyBuddy",      port: 3028, icon: "📚", gradient: "linear-gradient(135deg,#3b82f6,#2563eb)", cat: "education", desc: "AI study companion with flashcard generation, spaced repetition, and group study rooms." },
-  { id: 40, dir: "30-PetCarePlus",     name: "PetCarePlus",     port: 3029, icon: "🐾", gradient: "linear-gradient(135deg,#f97316,#ea580c)", cat: "lifestyle", desc: "Complete pet care platform with vet appointments, food tracking, and health logs." },
-  { id: 41, dir: "31-FitPath",         name: "FitPath",         port: 3030, icon: "🏋️", gradient: "linear-gradient(135deg,#ef4444,#b91c1c)", cat: "health",    desc: "Personalized fitness journey planner with adaptive workouts and progress photos." },
-  { id: 42, dir: "32-MoodMap",         name: "MoodMap",         port: 3031, icon: "🗺️", gradient: "linear-gradient(135deg,#a855f7,#7c3aed)", cat: "health",    desc: "Emotional wellbeing mapper that correlates mood with activities, weather, and sleep." },
-  { id: 43, dir: "33-GrocerySave",     name: "GrocerySave",     port: 3032, icon: "🛒", gradient: "linear-gradient(135deg,#22c55e,#166534)", cat: "finance",   desc: "Smart grocery list that compares prices, finds coupons, and minimizes food waste." },
-  { id: 44, dir: "34-PowerDown",       name: "PowerDown",       port: 3033, icon: "🔋", gradient: "linear-gradient(135deg,#eab308,#ca8a04)", cat: "sustainability", desc: "Home energy monitor that identifies phantom loads and suggests efficiency upgrades." },
-  { id: 45, dir: "35-KidLearn",        name: "KidLearn",        port: 3034, icon: "🧒", gradient: "linear-gradient(135deg,#f472b6,#ec4899)", cat: "education", desc: "Adaptive learning platform for children with games, stories, and parental insights." },
-  { id: 46, dir: "36-ElderEase",       name: "ElderEase",       port: 3035, icon: "👴", gradient: "linear-gradient(135deg,#14b8a6,#0d9488)", cat: "health",    desc: "Senior care coordination — medication reminders, fall detection, and family updates." },
-  { id: 47, dir: "37-TravelMate",      name: "TravelMate",      port: 3036, icon: "✈️", gradient: "linear-gradient(135deg,#06b6d4,#0e7490)", cat: "lifestyle", desc: "AI travel planner with local recommendations, budget tracking, and itinerary sharing." },
-  { id: 48, dir: "38-VolunteerHub",    name: "VolunteerHub",    port: 3037, icon: "🤝", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", cat: "community", desc: "Volunteer matching platform connecting skills with causes and tracking impact hours." },
-  { id: 49, dir: "39-NoiseMap",        name: "NoiseMap",        port: 3038, icon: "🔊", gradient: "linear-gradient(135deg,#64748b,#475569)", cat: "community", desc: "Crowdsourced noise pollution mapper helping people find quieter neighborhoods." },
-  { id: 50, dir: "40-AccessRoute",     name: "AccessRoute",     port: 3039, icon: "♿", gradient: "linear-gradient(135deg,#3b82f6,#1d4ed8)", cat: "community", desc: "Accessibility-first navigation with wheelchair ramps, elevators, and barrier-free routes." },
+  { id: 21, dir: "11-SleepSync",       name: "SleepSync",       port: 3010, icon: "😴", gradient: "linear-gradient(135deg,#6366f1,#4338ca)", cat: "health",    desc: "Smart sleep optimizer that syncs with your circadian rhythm and environment sensors.", features: ["Circadian rhythm sync","Sleep stage tracking","Smart alarm","Environment sensors","Sleep score","Trend insights"] },
+  { id: 22, dir: "12-MealMind",        name: "MealMind",        port: 3011, icon: "🥗", gradient: "linear-gradient(135deg,#22c55e,#15803d)", cat: "health",    desc: "AI nutrition planner that adapts meals to your health goals, allergies, and budget.", features: ["Personalized meal plans","Allergy filtering","Budget-aware recipes","Nutritional tracking","Grocery lists","Macro balancer"] },
+  { id: 23, dir: "13-FocusForge",      name: "FocusForge",      port: 3012, icon: "🎯", gradient: "linear-gradient(135deg,#f59e0b,#b45309)", cat: "productivity", desc: "Deep work timer with distraction blocking, flow state tracking, and focus analytics.", features: ["Pomodoro timer","Site blocker","Flow state detection","Focus analytics","Session history","Ambient sounds"] },
+  { id: 24, dir: "14-BillSplit",       name: "BillSplit",       port: 3013, icon: "💰", gradient: "linear-gradient(135deg,#10b981,#047857)", cat: "finance",   desc: "Smart bill splitting that handles complex scenarios — itemized, tax, tip, and IOUs.", features: ["Itemized splitting","Tax & tip calc","IOU tracking","Group expenses","Payment reminders","Receipt scanning"] },
+  { id: 25, dir: "15-SkillTree",       name: "SkillTree",       port: 3014, icon: "🌳", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", cat: "education", desc: "Gamified skill development with branching paths, XP, and community mentorship.", features: ["Skill branching paths","XP & leveling","Community mentors","Learning quests","Badge achievements","Progress visualization"] },
+  { id: 26, dir: "16-SafeWalk",        name: "SafeWalk",        port: 3015, icon: "🚶", gradient: "linear-gradient(135deg,#ef4444,#b91c1c)", cat: "community", desc: "Real-time safe route finder with crowd-sourced incident reports and live escort matching.", features: ["Safe route mapping","Incident reports","Live escort matching","Emergency SOS","Area safety scores","Night mode"] },
+  { id: 27, dir: "17-PlantPal",        name: "PlantPal",        port: 3016, icon: "🌱", gradient: "linear-gradient(135deg,#22c55e,#166534)", cat: "lifestyle", desc: "Smart plant care companion with species identification, watering schedules, and disease detection.", features: ["Plant ID by photo","Watering reminders","Disease detection","Growth journal","Care guides","Seasonal tips"] },
+  { id: 28, dir: "18-MemoryVault",     name: "MemoryVault",     port: 3017, icon: "📸", gradient: "linear-gradient(135deg,#ec4899,#be185d)", cat: "lifestyle", desc: "AI-organized digital memory vault that curates and resurfaces meaningful moments.", features: ["AI photo curation","Memory timelines","Face recognition","Story generation","Shared albums","On-this-day"] },
+  { id: 29, dir: "19-PriceHawk",       name: "PriceHawk",       port: 3018, icon: "🦅", gradient: "linear-gradient(135deg,#f97316,#c2410c)", cat: "finance",   desc: "Real-time price tracker across stores with deal alerts and price history charts.", features: ["Multi-store tracking","Price drop alerts","History charts","Wishlist manager","Coupon finder","Deal scoring"] },
+  { id: 30, dir: "20-NeighborNet",     name: "NeighborNet",     port: 3019, icon: "🏘️", gradient: "linear-gradient(135deg,#3b82f6,#1d4ed8)", cat: "community", desc: "Hyperlocal community network for sharing resources, skills, and neighborhood updates.", features: ["Neighborhood feed","Resource sharing","Local events","Skill exchange","Emergency alerts","Community polls"] },
+  { id: 31, dir: "21-DocuSafe",        name: "DocuSafe",        port: 3020, icon: "🔒", gradient: "linear-gradient(135deg,#64748b,#334155)", cat: "productivity", desc: "Encrypted document vault with smart organization, expiry alerts, and secure sharing.", features: ["End-to-end encryption","Smart categorization","Expiry alerts","Secure sharing","Version history","OCR search"] },
+  { id: 32, dir: "22-HabitLoop",       name: "HabitLoop",       port: 3021, icon: "🔄", gradient: "linear-gradient(135deg,#a855f7,#7c3aed)", cat: "health",    desc: "Behavioral habit tracker with streak mechanics, triggers analysis, and reward loops.", features: ["Habit streaks","Trigger analysis","Reward system","Daily check-ins","Visualization charts","Accountability partners"] },
+  { id: 33, dir: "23-TransLive",       name: "TransLive",       port: 3022, icon: "🌐", gradient: "linear-gradient(135deg,#06b6d4,#0891b2)", cat: "ai",       desc: "Real-time speech translation for meetings with 50+ languages and context awareness.", features: ["50+ languages","Real-time translation","Meeting transcripts","Context-aware","Speaker identification","Export notes"] },
+  { id: 34, dir: "24-WellCheck",       name: "WellCheck",       port: 3023, icon: "❤️", gradient: "linear-gradient(135deg,#ef4444,#dc2626)", cat: "health",    desc: "Daily wellness check-in with mood tracking, symptom journaling, and trend analysis.", features: ["Daily check-ins","Mood tracking","Symptom journal","Trend analysis","Health insights","Doctor reports"] },
+  { id: 35, dir: "25-BudgetBrain",     name: "BudgetBrain",     port: 3024, icon: "🧮", gradient: "linear-gradient(135deg,#10b981,#059669)", cat: "finance",   desc: "AI-powered budget planner that learns spending patterns and suggests smart savings.", features: ["AI spending analysis","Smart savings tips","Bill reminders","Category budgets","Goal tracking","Bank sync"] },
+  { id: 36, dir: "26-RepairHub",       name: "RepairHub",       port: 3025, icon: "🔧", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", cat: "community", desc: "Community repair marketplace connecting fixers with people who need things repaired.", features: ["Fixer profiles","Repair requests","Skill matching","Reviews & ratings","Price estimates","DIY guides"] },
+  { id: 37, dir: "27-TimeBank",        name: "TimeBank",        port: 3026, icon: "⏰", gradient: "linear-gradient(135deg,#8b5cf6,#6d28d9)", cat: "community", desc: "Time-based community currency — exchange hours of service instead of money.", features: ["Hour-based credits","Service listings","Skill matching","Community ledger","Trust scores","Group projects"] },
+  { id: 38, dir: "28-EcoTrack",        name: "EcoTrack",        port: 3027, icon: "♻️", gradient: "linear-gradient(135deg,#22c55e,#15803d)", cat: "sustainability", desc: "Personal carbon footprint tracker with actionable reduction tips and impact visualization.", features: ["Carbon calculator","Reduction tips","Impact dashboard","Challenge mode","Community goals","Offset marketplace"] },
+  { id: 39, dir: "29-StudyBuddy",      name: "StudyBuddy",      port: 3028, icon: "📚", gradient: "linear-gradient(135deg,#3b82f6,#2563eb)", cat: "education", desc: "AI study companion with flashcard generation, spaced repetition, and group study rooms.", features: ["AI flashcards","Spaced repetition","Group study rooms","Quiz generation","Progress tracking","Note summarizer"] },
+  { id: 40, dir: "30-PetCarePlus",     name: "PetCarePlus",     port: 3029, icon: "🐾", gradient: "linear-gradient(135deg,#f97316,#ea580c)", cat: "lifestyle", desc: "Complete pet care platform with vet appointments, food tracking, and health logs.", features: ["Vet booking","Food tracker","Health logs","Vaccination reminders","Growth charts","Pet community"] },
+  { id: 41, dir: "31-FitPath",         name: "FitPath",         port: 3030, icon: "🏋️", gradient: "linear-gradient(135deg,#ef4444,#b91c1c)", cat: "health",    desc: "Personalized fitness journey planner with adaptive workouts and progress photos.", features: ["Adaptive workouts","Progress photos","Body metrics","Exercise library","Workout calendar","Coach AI"] },
+  { id: 42, dir: "32-MoodMap",         name: "MoodMap",         port: 3031, icon: "🗺️", gradient: "linear-gradient(135deg,#a855f7,#7c3aed)", cat: "health",    desc: "Emotional wellbeing mapper that correlates mood with activities, weather, and sleep.", features: ["Mood heatmap","Activity correlation","Weather impact","Sleep analysis","Journal entries","Weekly insights"] },
+  { id: 43, dir: "33-GrocerySave",     name: "GrocerySave",     port: 3032, icon: "🛒", gradient: "linear-gradient(135deg,#22c55e,#166534)", cat: "finance",   desc: "Smart grocery list that compares prices, finds coupons, and minimizes food waste.", features: ["Price comparison","Coupon scanner","Waste reduction tips","Shared lists","Pantry tracker","Budget mode"] },
+  { id: 44, dir: "34-PowerDown",       name: "PowerDown",       port: 3033, icon: "🔋", gradient: "linear-gradient(135deg,#eab308,#ca8a04)", cat: "sustainability", desc: "Home energy monitor that identifies phantom loads and suggests efficiency upgrades.", features: ["Real-time monitoring","Phantom load detection","Efficiency tips","Cost projections","Appliance tracking","Solar integration"] },
+  { id: 45, dir: "35-KidLearn",        name: "KidLearn",        port: 3034, icon: "🧒", gradient: "linear-gradient(135deg,#f472b6,#ec4899)", cat: "education", desc: "Adaptive learning platform for children with games, stories, and parental insights.", features: ["Adaptive difficulty","Educational games","Story builder","Parent dashboard","Progress reports","Safe content"] },
+  { id: 46, dir: "36-ElderEase",       name: "ElderEase",       port: 3035, icon: "👴", gradient: "linear-gradient(135deg,#14b8a6,#0d9488)", cat: "health",    desc: "Senior care coordination — medication reminders, fall detection, and family updates.", features: ["Med reminders","Fall detection alerts","Family dashboard","Appointment tracker","Emergency contacts","Daily check-ins"] },
+  { id: 47, dir: "37-TravelMate",      name: "TravelMate",      port: 3036, icon: "✈️", gradient: "linear-gradient(135deg,#06b6d4,#0e7490)", cat: "lifestyle", desc: "AI travel planner with local recommendations, budget tracking, and itinerary sharing.", features: ["AI itinerary builder","Budget tracker","Local recommendations","Itinerary sharing","Flight tracking","Packing lists"] },
+  { id: 48, dir: "38-VolunteerHub",    name: "VolunteerHub",    port: 3037, icon: "🤝", gradient: "linear-gradient(135deg,#f59e0b,#d97706)", cat: "community", desc: "Volunteer matching platform connecting skills with causes and tracking impact hours.", features: ["Skill-based matching","Impact hours tracking","Organization profiles","Event calendar","Team coordination","Certificates"] },
+  { id: 49, dir: "39-NoiseMap",        name: "NoiseMap",        port: 3038, icon: "🔊", gradient: "linear-gradient(135deg,#64748b,#475569)", cat: "community", desc: "Crowdsourced noise pollution mapper helping people find quieter neighborhoods.", features: ["Noise heatmaps","Decibel reporting","Quiet zone finder","Time-based patterns","Community reports","Area comparison"] },
+  { id: 50, dir: "40-AccessRoute",     name: "AccessRoute",     port: 3039, icon: "♿", gradient: "linear-gradient(135deg,#3b82f6,#1d4ed8)", cat: "community", desc: "Accessibility-first navigation with wheelchair ramps, elevators, and barrier-free routes.", features: ["Accessible routing","Ramp/elevator maps","Barrier reporting","Venue ratings","Community updates","Audio navigation"] },
 
   // ═══ FRESH IDEAS 41-90 — 50 New Innovative Apps (ports 3040-3089) ═══
-  { id: 51, dir: "41-DreamLog",        name: "DreamLog",        port: 3040, icon: "🌙", gradient: "linear-gradient(135deg,#6366f1,#a855f7)", cat: "health",    desc: "AI dream journal that analyzes symbols, detects patterns, and tracks lucid dreaming." },
-  { id: 52, dir: "42-WardrobeAI",      name: "WardrobeAI",      port: 3041, icon: "👗", gradient: "linear-gradient(135deg,#ec4899,#f43f5e)", cat: "ai",       desc: "Smart outfit planner that suggests daily looks based on weather, calendar, and style." },
-  { id: 53, dir: "43-ParkSpot",        name: "ParkSpot",        port: 3042, icon: "🅿️", gradient: "linear-gradient(135deg,#3b82f6,#22d3ee)", cat: "community", desc: "Crowdsourced parking finder with real-time availability and price comparison." },
-  { id: 54, dir: "44-AquaTrack",       name: "AquaTrack",       port: 3043, icon: "💧", gradient: "linear-gradient(135deg,#22d3ee,#3b82f6)", cat: "health",    desc: "Smart water intake tracker with personalized hydration goals and reminder nudges." },
-  { id: 55, dir: "45-SnoreFix",        name: "SnoreFix",        port: 3044, icon: "😤", gradient: "linear-gradient(135deg,#f97316,#ef4444)", cat: "health",    desc: "Snoring detection and analysis app with actionable remedies and sleep quality scores." },
-  { id: 56, dir: "46-RentRight",       name: "RentRight",       port: 3045, icon: "🏢", gradient: "linear-gradient(135deg,#22c55e,#14b8a6)", cat: "finance",   desc: "Tenant rights advisor that scans leases for unfair clauses and suggests protections." },
-  { id: 57, dir: "47-CookTimer",       name: "CookTimer",       port: 3046, icon: "⏲️", gradient: "linear-gradient(135deg,#f59e0b,#f97316)", cat: "lifestyle", desc: "Multi-dish cooking timer that coordinates complex meals so everything is ready together." },
-  { id: 58, dir: "48-DonorLink",       name: "DonorLink",       port: 3047, icon: "🩸", gradient: "linear-gradient(135deg,#ef4444,#ec4899)", cat: "community", desc: "Blood donation matcher connecting donors with nearby hospitals in urgent need." },
-  { id: 59, dir: "49-SolarSave",       name: "SolarSave",       port: 3048, icon: "☀️", gradient: "linear-gradient(135deg,#eab308,#f97316)", cat: "sustainability", desc: "Solar panel ROI calculator with roof analysis, savings projections, and installer matching." },
-  { id: 60, dir: "50-AllergyMap",      name: "AllergyMap",      port: 3049, icon: "🤧", gradient: "linear-gradient(135deg,#10b981,#22c55e)", cat: "health",    desc: "Allergen-safe venue finder with verified menus, user reviews, and real-time pollen data." },
-  { id: 61, dir: "51-SkillSwap",       name: "SkillSwap",       port: 3050, icon: "🔀", gradient: "linear-gradient(135deg,#8b5cf6,#6366f1)", cat: "community", desc: "Freelancer skill barter platform — trade your expertise without exchanging money." },
-  { id: 62, dir: "52-QueueBuster",     name: "QueueBuster",     port: 3051, icon: "⏳", gradient: "linear-gradient(135deg,#f43f5e,#ef4444)", cat: "lifestyle", desc: "Real-time wait time tracker for restaurants, clinics, and government offices." },
-  { id: 63, dir: "53-MoveEasy",        name: "MoveEasy",        port: 3052, icon: "🚚", gradient: "linear-gradient(135deg,#14b8a6,#22c55e)", cat: "lifestyle", desc: "All-in-one moving planner with checklists, cost estimator, and address change manager." },
-  { id: 64, dir: "54-FoodRescue",      name: "FoodRescue",      port: 3053, icon: "🍎", gradient: "linear-gradient(135deg,#84cc16,#22c55e)", cat: "sustainability", desc: "Surplus food redistribution connecting restaurants with food banks and shelters." },
-  { id: 65, dir: "55-SoundScape",      name: "SoundScape",      port: 3054, icon: "🎵", gradient: "linear-gradient(135deg,#0ea5e9,#6366f1)", cat: "lifestyle", desc: "Ambient sound mixer for focus, sleep, and relaxation with AI-generated soundscapes." },
-  { id: 66, dir: "56-GigShield",       name: "GigShield",       port: 3055, icon: "🛡️", gradient: "linear-gradient(135deg,#f59e0b,#eab308)", cat: "finance",   desc: "Gig worker income protection with expense tracking, tax estimation, and benefits finder." },
-  { id: 67, dir: "57-ToolShare",       name: "ToolShare",       port: 3056, icon: "🔨", gradient: "linear-gradient(135deg,#f97316,#f59e0b)", cat: "community", desc: "Community tool lending library — borrow drills, saws, and ladders from neighbors." },
-  { id: 68, dir: "58-CleanSlate",      name: "CleanSlate",      port: 3057, icon: "🧹", gradient: "linear-gradient(135deg,#06b6d4,#14b8a6)", cat: "productivity", desc: "Digital declutter assistant that scans emails, files, apps, and subscriptions for cleanup." },
-  { id: 69, dir: "59-MedRemind",       name: "MedRemind",       port: 3058, icon: "💊", gradient: "linear-gradient(135deg,#ef4444,#f43f5e)", cat: "health",    desc: "Smart medication reminder with refill alerts, interaction warnings, and caregiver sync." },
-  { id: 70, dir: "60-BikeRoute",       name: "BikeRoute",       port: 3059, icon: "🚲", gradient: "linear-gradient(135deg,#22c55e,#84cc16)", cat: "lifestyle", desc: "Cyclist route planner with safety ratings, elevation profiles, and bike lane mapping." },
-  { id: 71, dir: "61-GreenCart",       name: "GreenCart",       port: 3060, icon: "🌿", gradient: "linear-gradient(135deg,#10b981,#84cc16)", cat: "sustainability", desc: "Eco-friendly product alternative finder with sustainability scores and price comparison." },
-  { id: 72, dir: "62-LostPet",         name: "LostPet",         port: 3061, icon: "🐕", gradient: "linear-gradient(135deg,#ef4444,#f97316)", cat: "community", desc: "Lost pet finder with instant community alerts, AI photo matching, and safe return coordination." },
-  { id: 73, dir: "63-FixMyCredit",     name: "FixMyCredit",     port: 3062, icon: "📈", gradient: "linear-gradient(135deg,#3b82f6,#6366f1)", cat: "finance",   desc: "Credit score improvement planner with personalized action steps and progress tracking." },
-  { id: 74, dir: "64-PlateJoy",        name: "PlateJoy",        port: 3063, icon: "📷", gradient: "linear-gradient(135deg,#ec4899,#d946ef)", cat: "lifestyle", desc: "Dish photo review platform — rate, discover, and share the best dishes at any restaurant." },
-  { id: 75, dir: "65-SeniorTech",      name: "SeniorTech",      port: 3064, icon: "👵", gradient: "linear-gradient(135deg,#0ea5e9,#38bdf8)", cat: "education", desc: "Tech tutoring for seniors — simplified guides, video calls with helpers, and patient UI." },
-  { id: 76, dir: "66-RainAlert",       name: "RainAlert",       port: 3065, icon: "🌧️", gradient: "linear-gradient(135deg,#3b82f6,#6366f1)", cat: "lifestyle", desc: "Hyperlocal rain prediction — know exactly when rain starts and stops at your location." },
-  { id: 77, dir: "67-BookSwap",        name: "BookSwap",        port: 3066, icon: "📖", gradient: "linear-gradient(135deg,#f59e0b,#f97316)", cat: "community", desc: "Community book exchange — list books you've read, find ones you want, swap for free." },
-  { id: 78, dir: "68-PostureAI",       name: "PostureAI",       port: 3067, icon: "🧘", gradient: "linear-gradient(135deg,#8b5cf6,#a855f7)", cat: "health",    desc: "AI posture correction coach using webcam analysis with real-time alerts and exercises." },
-  { id: 79, dir: "69-ChoreWars",       name: "ChoreWars",       port: 3068, icon: "🏆", gradient: "linear-gradient(135deg,#eab308,#22c55e)", cat: "lifestyle", desc: "Gamified household chore manager with points, streaks, leaderboards, and rewards." },
-  { id: 80, dir: "70-TaxHelper",       name: "TaxHelper",       port: 3069, icon: "🧾", gradient: "linear-gradient(135deg,#22c55e,#10b981)", cat: "finance",   desc: "Tax deduction finder that scans your expenses and identifies savings you're missing." },
-  { id: 81, dir: "71-WifiMap",         name: "WifiMap",         port: 3070, icon: "📶", gradient: "linear-gradient(135deg,#22d3ee,#3b82f6)", cat: "community", desc: "Crowdsourced free WiFi finder with speed tests, reliability scores, and passwords." },
-  { id: 82, dir: "72-MoodFood",        name: "MoodFood",        port: 3071, icon: "🍲", gradient: "linear-gradient(135deg,#f97316,#ec4899)", cat: "health",    desc: "Mood-based food recommendations backed by nutritional science and your taste preferences." },
-  { id: 83, dir: "73-GardenPlan",      name: "GardenPlan",      port: 3072, icon: "🌻", gradient: "linear-gradient(135deg,#22c55e,#10b981)", cat: "lifestyle", desc: "AI garden layout planner with companion planting, seasonal timing, and yield estimates." },
-  { id: 84, dir: "74-SafeEats",        name: "SafeEats",        port: 3073, icon: "🍽️", gradient: "linear-gradient(135deg,#ef4444,#eab308)", cat: "health",    desc: "Restaurant hygiene score browser with inspection data, violations, and safety ratings." },
-  { id: 85, dir: "75-DebtFree",        name: "DebtFree",        port: 3074, icon: "💳", gradient: "linear-gradient(135deg,#3b82f6,#22c55e)", cat: "finance",   desc: "Debt payoff optimizer with avalanche/snowball strategies and milestone celebrations." },
-  { id: 86, dir: "76-SpeakEasy",       name: "SpeakEasy",       port: 3075, icon: "🎤", gradient: "linear-gradient(135deg,#a855f7,#3b82f6)", cat: "education", desc: "AI public speaking coach analyzing pace, filler words, clarity, and confidence." },
-  { id: 87, dir: "77-NapGenius",       name: "NapGenius",       port: 3076, icon: "💤", gradient: "linear-gradient(135deg,#6366f1,#3b82f6)", cat: "health",    desc: "Scientific power nap scheduler that finds your optimal nap window for max alertness." },
-  { id: 88, dir: "78-EyeCare",         name: "EyeCare",         port: 3077, icon: "👁️", gradient: "linear-gradient(135deg,#14b8a6,#06b6d4)", cat: "health",    desc: "Screen strain manager with 20-20-20 rule reminders, blink tracking, and eye exercises." },
-  { id: 89, dir: "79-WindDown",        name: "WindDown",        port: 3078, icon: "🌅", gradient: "linear-gradient(135deg,#a855f7,#f43f5e)", cat: "lifestyle", desc: "Evening routine builder that prepares mind and body for restorative sleep." },
-  { id: 90, dir: "80-TrailFinder",     name: "TrailFinder",     port: 3079, icon: "🥾", gradient: "linear-gradient(135deg,#22c55e,#eab308)", cat: "lifestyle", desc: "Hiking trail tracker with live conditions, difficulty ratings, and community photos." },
-  { id: 91, dir: "81-PillCheck",       name: "PillCheck",       port: 3080, icon: "⚕️", gradient: "linear-gradient(135deg,#ef4444,#f97316)", cat: "health",    desc: "Drug interaction checker — input your medications and get instant safety analysis." },
-  { id: 92, dir: "82-CarPool",         name: "CarPool",         port: 3081, icon: "🚗", gradient: "linear-gradient(135deg,#3b82f6,#22c55e)", cat: "community", desc: "Smart carpool matcher based on route, schedule, and preferences with cost splitting." },
-  { id: 93, dir: "83-SkinDoc",         name: "SkinDoc",         port: 3082, icon: "🔬", gradient: "linear-gradient(135deg,#ec4899,#a855f7)", cat: "ai",       desc: "AI skin condition analyzer with photo tracking, risk assessment, and dermatologist referrals." },
-  { id: 94, dir: "84-ClassPass",       name: "ClassPass",       port: 3083, icon: "🎨", gradient: "linear-gradient(135deg,#8b5cf6,#d946ef)", cat: "education", desc: "Local workshop and class discovery — pottery, cooking, music, art, and more." },
-  { id: 95, dir: "85-BabyLog",         name: "BabyLog",         port: 3084, icon: "👶", gradient: "linear-gradient(135deg,#0ea5e9,#f472b6)", cat: "health",    desc: "Newborn care tracker for feeds, sleep, diapers, milestones, and growth charts." },
-  { id: 96, dir: "86-GreenScore",      name: "GreenScore",      port: 3085, icon: "🏡", gradient: "linear-gradient(135deg,#10b981,#14b8a6)", cat: "sustainability", desc: "Home sustainability scorer with room-by-room assessment and improvement roadmap." },
-  { id: 97, dir: "87-MealPrep",        name: "MealPrep",        port: 3086, icon: "🥘", gradient: "linear-gradient(135deg,#f97316,#eab308)", cat: "lifestyle", desc: "Batch cooking planner with recipes, grocery lists, storage tips, and cost breakdown." },
-  { id: 98, dir: "88-StreetArt",       name: "StreetArt",       port: 3087, icon: "🎨", gradient: "linear-gradient(135deg,#d946ef,#a855f7)", cat: "community", desc: "Street art discovery platform with GPS mapping, artist profiles, and walking tours." },
-  { id: 99, dir: "89-FocusZone",       name: "FocusZone",       port: 3088, icon: "🧩", gradient: "linear-gradient(135deg,#3b82f6,#8b5cf6)", cat: "productivity", desc: "Quiet workspace finder — libraries, cafes, and coworking spaces rated for focus." },
-  { id: 100, dir: "90-SignLingo",      name: "SignLingo",       port: 3089, icon: "🤟", gradient: "linear-gradient(135deg,#eab308,#22c55e)", cat: "education", desc: "Interactive sign language learning with video lessons, quizzes, and practice games." },
+  { id: 51, dir: "41-DreamLog",        name: "DreamLog",        port: 3040, icon: "🌙", gradient: "linear-gradient(135deg,#6366f1,#a855f7)", cat: "health",    desc: "AI dream journal that analyzes symbols, detects patterns, and tracks lucid dreaming.", features: ["Dream journaling","Symbol analysis","Pattern detection","Lucid dream tracking","Sleep quality score","Dream dictionary"] },
+  { id: 52, dir: "42-WardrobeAI",      name: "WardrobeAI",      port: 3041, icon: "👗", gradient: "linear-gradient(135deg,#ec4899,#f43f5e)", cat: "ai",       desc: "Smart outfit planner that suggests daily looks based on weather, calendar, and style.", features: ["AI outfit suggestions","Weather-aware styling","Calendar integration","Virtual closet","Style profile","Outfit history"] },
+  { id: 53, dir: "43-ParkSpot",        name: "ParkSpot",        port: 3042, icon: "🅿️", gradient: "linear-gradient(135deg,#3b82f6,#22d3ee)", cat: "community", desc: "Crowdsourced parking finder with real-time availability and price comparison.", features: ["Real-time availability","Price comparison","Spot reservations","Street vs garage","Walking distance","Community reports"] },
+  { id: 54, dir: "44-AquaTrack",       name: "AquaTrack",       port: 3043, icon: "💧", gradient: "linear-gradient(135deg,#22d3ee,#3b82f6)", cat: "health",    desc: "Smart water intake tracker with personalized hydration goals and reminder nudges.", features: ["Intake logging","Personalized goals","Smart reminders","Beverage types","Daily/weekly charts","Streak tracking"] },
+  { id: 55, dir: "45-SnoreFix",        name: "SnoreFix",        port: 3044, icon: "😤", gradient: "linear-gradient(135deg,#f97316,#ef4444)", cat: "health",    desc: "Snoring detection and analysis app with actionable remedies and sleep quality scores.", features: ["Audio recording","Snore event detection","Decibel analysis","Remedy suggestions","Sleep quality score","Trend tracking"] },
+  { id: 56, dir: "46-RentRight",       name: "RentRight",       port: 3045, icon: "🏢", gradient: "linear-gradient(135deg,#22c55e,#14b8a6)", cat: "finance",   desc: "Tenant rights advisor that scans leases for unfair clauses and suggests protections.", features: ["Lease scanning","Clause risk rating","Rights database","Dispute templates","Rent tracker","Legal resources"] },
+  { id: 57, dir: "47-CookTimer",       name: "CookTimer",       port: 3046, icon: "⏲️", gradient: "linear-gradient(135deg,#f59e0b,#f97316)", cat: "lifestyle", desc: "Multi-dish cooking timer that coordinates complex meals so everything is ready together.", features: ["Multi-timer sync","Dish coordination","Prep step alerts","Recipe import","Meal presets","Hands-free voice"] },
+  { id: 58, dir: "48-DonorLink",       name: "DonorLink",       port: 3047, icon: "🩸", gradient: "linear-gradient(135deg,#ef4444,#ec4899)", cat: "community", desc: "Blood donation matcher connecting donors with nearby hospitals in urgent need.", features: ["Blood type matching","Urgency alerts","Hospital locator","Donation history","Appointment booking","Community impact"] },
+  { id: 59, dir: "49-SolarSave",       name: "SolarSave",       port: 3048, icon: "☀️", gradient: "linear-gradient(135deg,#eab308,#f97316)", cat: "sustainability", desc: "Solar panel ROI calculator with roof analysis, savings projections, and installer matching.", features: ["ROI calculator","Roof analysis","Savings projections","Installer matching","CO2 reduction","Payback timeline"] },
+  { id: 60, dir: "50-AllergyMap",      name: "AllergyMap",      port: 3049, icon: "🤧", gradient: "linear-gradient(135deg,#10b981,#22c55e)", cat: "health",    desc: "Allergen-safe venue finder with verified menus, user reviews, and real-time pollen data.", features: ["Allergen-free venues","Verified menus","User reviews","Pollen data","Safe dish search","Allergy profiles"] },
+  { id: 61, dir: "51-SkillSwap",       name: "SkillSwap",       port: 3050, icon: "🔀", gradient: "linear-gradient(135deg,#8b5cf6,#6366f1)", cat: "community", desc: "Freelancer skill barter platform — trade your expertise without exchanging money.", features: ["Skill listings","Barter matching","Trust ratings","Portfolio showcase","Session scheduling","Skill verification"] },
+  { id: 62, dir: "52-QueueBuster",     name: "QueueBuster",     port: 3051, icon: "⏳", gradient: "linear-gradient(135deg,#f43f5e,#ef4444)", cat: "lifestyle", desc: "Real-time wait time tracker for restaurants, clinics, and government offices.", features: ["Live wait times","Crowd levels","Best visit times","Queue notifications","Venue search","Community reports"] },
+  { id: 63, dir: "53-MoveEasy",        name: "MoveEasy",        port: 3052, icon: "🚚", gradient: "linear-gradient(135deg,#14b8a6,#22c55e)", cat: "lifestyle", desc: "All-in-one moving planner with checklists, cost estimator, and address change manager.", features: ["Moving checklists","Cost estimator","Address updater","Mover comparison","Inventory tracker","Timeline planner"] },
+  { id: 64, dir: "54-FoodRescue",      name: "FoodRescue",      port: 3053, icon: "🍎", gradient: "linear-gradient(135deg,#84cc16,#22c55e)", cat: "sustainability", desc: "Surplus food redistribution connecting restaurants with food banks and shelters.", features: ["Surplus listings","Quick pickup","Food bank matching","Expiry tracking","Impact metrics","Donor dashboard"] },
+  { id: 65, dir: "55-SoundScape",      name: "SoundScape",      port: 3054, icon: "🎵", gradient: "linear-gradient(135deg,#0ea5e9,#6366f1)", cat: "lifestyle", desc: "Ambient sound mixer for focus, sleep, and relaxation with AI-generated soundscapes.", features: ["Sound mixing","AI soundscapes","Sleep timer","Focus presets","Nature sounds","Custom mixes"] },
+  { id: 66, dir: "56-GigShield",       name: "GigShield",       port: 3055, icon: "🛡️", gradient: "linear-gradient(135deg,#f59e0b,#eab308)", cat: "finance",   desc: "Gig worker income protection with expense tracking, tax estimation, and benefits finder.", features: ["Income tracking","Expense logging","Tax estimation","Benefits finder","Mileage tracker","Invoice generator"] },
+  { id: 67, dir: "57-ToolShare",       name: "ToolShare",       port: 3056, icon: "🔨", gradient: "linear-gradient(135deg,#f97316,#f59e0b)", cat: "community", desc: "Community tool lending library — borrow drills, saws, and ladders from neighbors.", features: ["Tool listings","Borrow requests","Availability calendar","Condition tracking","Reviews","Location-based"] },
+  { id: 68, dir: "58-CleanSlate",      name: "CleanSlate",      port: 3057, icon: "🧹", gradient: "linear-gradient(135deg,#06b6d4,#14b8a6)", cat: "productivity", desc: "Digital declutter assistant that scans emails, files, apps, and subscriptions for cleanup.", features: ["Email cleaner","File scanner","App auditor","Subscription tracker","Space recovered","Auto-suggestions"] },
+  { id: 69, dir: "59-MedRemind",       name: "MedRemind",       port: 3058, icon: "💊", gradient: "linear-gradient(135deg,#ef4444,#f43f5e)", cat: "health",    desc: "Smart medication reminder with refill alerts, interaction warnings, and caregiver sync.", features: ["Med reminders","Refill alerts","Interaction checker","Caregiver sync","Dosage log","Pharmacy finder"] },
+  { id: 70, dir: "60-BikeRoute",       name: "BikeRoute",       port: 3059, icon: "🚲", gradient: "linear-gradient(135deg,#22c55e,#84cc16)", cat: "lifestyle", desc: "Cyclist route planner with safety ratings, elevation profiles, and bike lane mapping.", features: ["Safety ratings","Elevation profiles","Bike lane maps","Route sharing","Weather overlay","Ride logging"] },
+  { id: 71, dir: "61-GreenCart",       name: "GreenCart",       port: 3060, icon: "🌿", gradient: "linear-gradient(135deg,#10b981,#84cc16)", cat: "sustainability", desc: "Eco-friendly product alternative finder with sustainability scores and price comparison.", features: ["Eco alternatives","Sustainability scores","Price comparison","Brand ratings","Ingredient scanner","Wishlist"] },
+  { id: 72, dir: "62-LostPet",         name: "LostPet",         port: 3061, icon: "🐕", gradient: "linear-gradient(135deg,#ef4444,#f97316)", cat: "community", desc: "Lost pet finder with instant community alerts, AI photo matching, and safe return coordination.", features: ["Lost/found reports","AI photo matching","Community alerts","Area search","Safe return","Vet network"] },
+  { id: 73, dir: "63-FixMyCredit",     name: "FixMyCredit",     port: 3062, icon: "📈", gradient: "linear-gradient(135deg,#3b82f6,#6366f1)", cat: "finance",   desc: "Credit score improvement planner with personalized action steps and progress tracking.", features: ["Score simulator","Action steps","Progress tracking","Factor analysis","Dispute help","Credit monitoring"] },
+  { id: 74, dir: "64-PlateJoy",        name: "PlateJoy",        port: 3063, icon: "📷", gradient: "linear-gradient(135deg,#ec4899,#d946ef)", cat: "lifestyle", desc: "Dish photo review platform — rate, discover, and share the best dishes at any restaurant.", features: ["Photo reviews","Dish ratings","Restaurant search","Food tags","Trending dishes","Social sharing"] },
+  { id: 75, dir: "65-SeniorTech",      name: "SeniorTech",      port: 3064, icon: "👵", gradient: "linear-gradient(135deg,#0ea5e9,#38bdf8)", cat: "education", desc: "Tech tutoring for seniors — simplified guides, video calls with helpers, and patient UI.", features: ["Step-by-step guides","Video help calls","Large text UI","Device tutorials","Helper matching","Progress badges"] },
+  { id: 76, dir: "66-RainAlert",       name: "RainAlert",       port: 3065, icon: "🌧️", gradient: "linear-gradient(135deg,#3b82f6,#6366f1)", cat: "lifestyle", desc: "Hyperlocal rain prediction — know exactly when rain starts and stops at your location.", features: ["Minute-by-minute forecast","Rain start/stop times","Location pinning","Push notifications","Umbrella alerts","Historical accuracy"] },
+  { id: 77, dir: "67-BookSwap",        name: "BookSwap",        port: 3066, icon: "📖", gradient: "linear-gradient(135deg,#f59e0b,#f97316)", cat: "community", desc: "Community book exchange — list books you've read, find ones you want, swap for free.", features: ["Book listings","Swap matching","Wishlist","Genre browse","Local pickup","Reading stats"] },
+  { id: 78, dir: "68-PostureAI",       name: "PostureAI",       port: 3067, icon: "🧘", gradient: "linear-gradient(135deg,#8b5cf6,#a855f7)", cat: "health",    desc: "AI posture correction coach using webcam analysis with real-time alerts and exercises.", features: ["Webcam analysis","Real-time alerts","Exercise library","Posture scoring","Daily reports","Desk setup tips"] },
+  { id: 79, dir: "69-ChoreWars",       name: "ChoreWars",       port: 3068, icon: "🏆", gradient: "linear-gradient(135deg,#eab308,#22c55e)", cat: "lifestyle", desc: "Gamified household chore manager with points, streaks, leaderboards, and rewards.", features: ["Point system","Streak tracking","Leaderboards","Reward shop","Chore rotation","Family dashboard"] },
+  { id: 80, dir: "70-TaxHelper",       name: "TaxHelper",       port: 3069, icon: "🧾", gradient: "linear-gradient(135deg,#22c55e,#10b981)", cat: "finance",   desc: "Tax deduction finder that scans your expenses and identifies savings you're missing.", features: ["Deduction scanner","Expense categorizer","Savings estimator","Receipt uploads","Tax calendar","Filing checklist"] },
+  { id: 81, dir: "71-WifiMap",         name: "WifiMap",         port: 3070, icon: "📶", gradient: "linear-gradient(135deg,#22d3ee,#3b82f6)", cat: "community", desc: "Crowdsourced free WiFi finder with speed tests, reliability scores, and passwords.", features: ["WiFi map","Speed tests","Reliability scores","Password sharing","Venue info","Offline cache"] },
+  { id: 82, dir: "72-MoodFood",        name: "MoodFood",        port: 3071, icon: "🍲", gradient: "linear-gradient(135deg,#f97316,#ec4899)", cat: "health",    desc: "Mood-based food recommendations backed by nutritional science and your taste preferences.", features: ["Mood-food matching","Nutritional science","Taste profile","Recipe suggestions","Ingredient tracker","Mood history"] },
+  { id: 83, dir: "73-GardenPlan",      name: "GardenPlan",      port: 3072, icon: "🌻", gradient: "linear-gradient(135deg,#22c55e,#10b981)", cat: "lifestyle", desc: "AI garden layout planner with companion planting, seasonal timing, and yield estimates.", features: ["Layout designer","Companion planting","Seasonal calendar","Yield estimates","Plant database","Watering schedule"] },
+  { id: 84, dir: "74-SafeEats",        name: "SafeEats",        port: 3073, icon: "🍽️", gradient: "linear-gradient(135deg,#ef4444,#eab308)", cat: "health",    desc: "Restaurant hygiene score browser with inspection data, violations, and safety ratings.", features: ["Hygiene scores","Inspection reports","Violation history","Safety grades","Nearby restaurants","Trend tracking"] },
+  { id: 85, dir: "75-DebtFree",        name: "DebtFree",        port: 3074, icon: "💳", gradient: "linear-gradient(135deg,#3b82f6,#22c55e)", cat: "finance",   desc: "Debt payoff optimizer with avalanche/snowball strategies and milestone celebrations.", features: ["Avalanche strategy","Snowball strategy","Payoff timeline","Milestone rewards","Interest saved","Extra payment planner"] },
+  { id: 86, dir: "76-SpeakEasy",       name: "SpeakEasy",       port: 3075, icon: "🎤", gradient: "linear-gradient(135deg,#a855f7,#3b82f6)", cat: "education", desc: "AI public speaking coach analyzing pace, filler words, clarity, and confidence.", features: ["Speech recording","Filler word counter","Pace analysis","Clarity scoring","Confidence meter","Practice exercises"] },
+  { id: 87, dir: "77-NapGenius",       name: "NapGenius",       port: 3076, icon: "💤", gradient: "linear-gradient(135deg,#6366f1,#3b82f6)", cat: "health",    desc: "Scientific power nap scheduler that finds your optimal nap window for max alertness.", features: ["Optimal nap timing","Sleep cycle calc","Energy assessment","Smart alarm","Nap types","Post-nap rating"] },
+  { id: 88, dir: "78-EyeCare",         name: "EyeCare",         port: 3077, icon: "👁️", gradient: "linear-gradient(135deg,#14b8a6,#06b6d4)", cat: "health",    desc: "Screen strain manager with 20-20-20 rule reminders, blink tracking, and eye exercises.", features: ["20-20-20 reminders","Screen time tracking","Eye exercises","Blink rate monitor","Break scheduler","Strain score"] },
+  { id: 89, dir: "79-WindDown",        name: "WindDown",        port: 3078, icon: "🌅", gradient: "linear-gradient(135deg,#a855f7,#f43f5e)", cat: "lifestyle", desc: "Evening routine builder that prepares mind and body for restorative sleep.", features: ["Custom routines","Step-by-step guide","Bedtime reminders","Relaxation exercises","Sleep quality tracking","Streak rewards"] },
+  { id: 90, dir: "80-TrailFinder",     name: "TrailFinder",     port: 3079, icon: "🥾", gradient: "linear-gradient(135deg,#22c55e,#eab308)", cat: "lifestyle", desc: "Hiking trail tracker with live conditions, difficulty ratings, and community photos.", features: ["Trail conditions","Difficulty ratings","Photo gallery","GPS tracking","Elevation maps","Trail reviews"] },
+  { id: 91, dir: "81-PillCheck",       name: "PillCheck",       port: 3080, icon: "⚕️", gradient: "linear-gradient(135deg,#ef4444,#f97316)", cat: "health",    desc: "Drug interaction checker — input your medications and get instant safety analysis.", features: ["Interaction checker","Severity ratings","Med database","Safety reports","Alternative suggestions","Pharmacist connect"] },
+  { id: 92, dir: "82-CarPool",         name: "CarPool",         port: 3081, icon: "🚗", gradient: "linear-gradient(135deg,#3b82f6,#22c55e)", cat: "community", desc: "Smart carpool matcher based on route, schedule, and preferences with cost splitting.", features: ["Route matching","Schedule sync","Cost splitting","Rider ratings","Recurring rides","Chat messaging"] },
+  { id: 93, dir: "83-SkinDoc",         name: "SkinDoc",         port: 3082, icon: "🔬", gradient: "linear-gradient(135deg,#ec4899,#a855f7)", cat: "ai",       desc: "AI skin condition analyzer with photo tracking, risk assessment, and dermatologist referrals.", features: ["Photo analysis","Condition tracking","Risk assessment","Derm referrals","Skin diary","UV monitoring"] },
+  { id: 94, dir: "84-ClassPass",       name: "ClassPass",       port: 3083, icon: "🎨", gradient: "linear-gradient(135deg,#8b5cf6,#d946ef)", cat: "education", desc: "Local workshop and class discovery — pottery, cooking, music, art, and more.", features: ["Class discovery","Category browse","Booking system","Reviews & ratings","Instructor profiles","Gift passes"] },
+  { id: 95, dir: "85-BabyLog",         name: "BabyLog",         port: 3084, icon: "👶", gradient: "linear-gradient(135deg,#0ea5e9,#f472b6)", cat: "health",    desc: "Newborn care tracker for feeds, sleep, diapers, milestones, and growth charts.", features: ["Feed tracking","Sleep logger","Diaper log","Milestone tracker","Growth charts","Caregiver sharing"] },
+  { id: 96, dir: "86-GreenScore",      name: "GreenScore",      port: 3085, icon: "🏡", gradient: "linear-gradient(135deg,#10b981,#14b8a6)", cat: "sustainability", desc: "Home sustainability scorer with room-by-room assessment and improvement roadmap.", features: ["Room-by-room audit","Sustainability score","Improvement plan","Energy tips","Water savings","Waste reduction"] },
+  { id: 97, dir: "87-MealPrep",        name: "MealPrep",        port: 3086, icon: "🥘", gradient: "linear-gradient(135deg,#f97316,#eab308)", cat: "lifestyle", desc: "Batch cooking planner with recipes, grocery lists, storage tips, and cost breakdown.", features: ["Batch recipes","Grocery lists","Storage tips","Cost breakdown","Nutritional info","Weekly planner"] },
+  { id: 98, dir: "88-StreetArt",       name: "StreetArt",       port: 3087, icon: "🎨", gradient: "linear-gradient(135deg,#d946ef,#a855f7)", cat: "community", desc: "Street art discovery platform with GPS mapping, artist profiles, and walking tours.", features: ["GPS art map","Artist profiles","Walking tours","Photo gallery","New art alerts","Community votes"] },
+  { id: 99, dir: "89-FocusZone",       name: "FocusZone",       port: 3088, icon: "🧩", gradient: "linear-gradient(135deg,#3b82f6,#8b5cf6)", cat: "productivity", desc: "Quiet workspace finder — libraries, cafes, and coworking spaces rated for focus.", features: ["Noise level ratings","WiFi speed","Power outlets","Hours & location","User reviews","Favorites list"] },
+  { id: 100, dir: "90-SignLingo",      name: "SignLingo",       port: 3089, icon: "🤟", gradient: "linear-gradient(135deg,#eab308,#22c55e)", cat: "education", desc: "Interactive sign language learning with video lessons, quizzes, and practice games.", features: ["Video lessons","Interactive quizzes","Practice games","Progress tracking","ASL dictionary","Daily challenges"] },
 ];
 
 // ── Category labels / colors ──
@@ -503,12 +709,70 @@ const resultText = document.getElementById('resultCount');
 const filterBtns = document.querySelectorAll('.filter-btn');
 let activeCat = 'all';
 
+// ── Modal logic ──
+const modalOverlay = document.getElementById('modalOverlay');
+const modalInner   = document.getElementById('modalInner');
+const modalClose   = document.getElementById('modalClose');
+
+function openModal(p) {
+  const catLabel = catMeta[p.cat]?.label || p.cat;
+  const techStack = ['Next.js 14','React 18','TypeScript','Tailwind CSS','Prisma ORM','PostgreSQL'];
+  modalInner.innerHTML = `
+    <div class="modal-banner" style="background:${p.gradient}">
+      <span class="modal-banner-icon">${p.icon}</span>
+    </div>
+    <div class="modal-body">
+      <div class="modal-title">${p.name}</div>
+      <div class="modal-subtitle">#${String(p.id).padStart(3,'0')} &middot; ${p.dir} &middot; ${catLabel}</div>
+      <div class="modal-desc">${p.desc}</div>
+
+      <div class="modal-section-title">Key Features</div>
+      <div class="modal-features">
+        ${(p.features || []).map(f => `<div class="feature-item"><span class="feature-dot" style="background:${p.gradient}"></span>${f}</div>`).join('')}
+      </div>
+
+      <div class="modal-section-title">Tech Stack</div>
+      <div class="modal-tech">
+        ${techStack.map(t => `<span class="tech-badge">${t}</span>`).join('')}
+      </div>
+
+      <div class="modal-section-title">Project Details</div>
+      <div class="modal-meta">
+        <div class="meta-card"><div class="meta-card-val">${catLabel}</div><div class="meta-card-label">Category</div></div>
+        <div class="meta-card"><div class="meta-card-val">:${p.port}</div><div class="meta-card-label">Dev Server</div></div>
+        <div class="meta-card"><div class="meta-card-val" style="color:#22c55e">● Live</div><div class="meta-card-label">Status</div></div>
+        <div class="meta-card"><div class="meta-card-val">v1.0</div><div class="meta-card-label">Version</div></div>
+      </div>
+
+      <div class="modal-actions">
+        <a class="btn-launch btn-launch-primary" href="http://localhost:${p.port}" target="_blank" rel="noopener">
+          &#9654;&ensp;Launch Application
+        </a>
+        <button class="btn-launch btn-launch-secondary" onclick="closeModal()">
+          &#8592;&ensp;Back to Projects
+        </button>
+      </div>
+    </div>
+  `;
+  modalOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  modalOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+modalClose.addEventListener('click', closeModal);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
 function renderCards(list) {
   if (list.length === 0) {
     grid.innerHTML = `<div class="no-results"><h3>No projects found</h3><p>Try a different search term or category.</p></div>`;
   } else {
     grid.innerHTML = list.map(p => `
-      <a class="card" href="http://localhost:${p.port}" target="_blank" rel="noopener" style="--card-gradient:${p.gradient}">
+      <div class="card" data-id="${p.id}" style="--card-gradient:${p.gradient}">
         <div class="card-header">
           <div class="card-icon" style="background:${p.gradient}">${p.icon}</div>
           <div>
@@ -521,8 +785,15 @@ function renderCards(list) {
           <span class="card-tag">${catMeta[p.cat]?.label || p.cat}</span>
           <span class="card-port"><span class="card-status"></span>:${p.port}</span>
         </div>
-      </a>
+      </div>
     `).join('');
+    // Attach click handlers
+    grid.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('click', () => {
+        const proj = projects.find(p => p.id === parseInt(card.dataset.id));
+        if (proj) openModal(proj);
+      });
+    });
   }
   resultText.innerHTML = `Showing <span>${list.length}</span> project${list.length !== 1 ? 's' : ''}`;
 }
