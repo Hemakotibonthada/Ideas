@@ -1,0 +1,130 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum InteractionSeverity {
+  NONE
+  MILD
+  MODERATE
+  SEVERE
+  CONTRAINDICATED
+}
+
+enum MedForm {
+  TABLET
+  CAPSULE
+  LIQUID
+  INJECTION
+  TOPICAL
+  INHALER
+  PATCH
+}
+
+enum Role {
+  USER
+  PHARMACIST
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id              String            @id @default(cuid())
+  email           String            @unique
+  name            String
+  password        String
+  role            Role              @default(USER)
+  dateOfBirth     DateTime?
+  allergies       String[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  userMedications UserMedication[]
+  interactionChecks InteractionCheck[]
+
+  @@index([email])
+}
+
+model Medication {
+  id            String           @id @default(cuid())
+  name          String
+  genericName   String
+  dosage        String
+  form          MedForm
+  manufacturer  String
+  ndc           String?          @unique
+  description   String?
+  sideEffects   String[]
+  warnings      String[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  userMedications UserMedication[]
+  interactionsA Interaction[]    @relation("MedA")
+  interactionsB Interaction[]    @relation("MedB")
+
+  @@index([name])
+  @@index([genericName])
+  @@index([manufacturer])
+}
+
+model Interaction {
+  id             String              @id @default(cuid())
+  medAId         String
+  medA           Medication          @relation("MedA", fields: [medAId], references: [id], onDelete: Cascade)
+  medBId         String
+  medB           Medication          @relation("MedB", fields: [medBId], references: [id], onDelete: Cascade)
+  severity       InteractionSeverity
+  description    String
+  recommendation String
+  mechanism      String?
+  evidence       String?
+  source         String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([medAId, medBId])
+  @@index([severity])
+}
+
+model UserMedication {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  startDate    DateTime
+  endDate      DateTime?
+  active       Boolean    @default(true)
+  dosageAmount String?
+  frequency    String?
+  timeOfDay    String[]
+  prescribedBy String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, medicationId, startDate])
+  @@index([userId])
+  @@index([medicationId])
+  @@index([active])
+}
+
+model InteractionCheck {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicationIds String[]
+  results       Json
+  warningCount  Int      @default(0)
+  maxSeverity   InteractionSeverity?
+  date          DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
+}

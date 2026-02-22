@@ -1,0 +1,166 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum FamilyRole {
+  PRIMARY_CAREGIVER
+  FAMILY
+  PROFESSIONAL_CAREGIVER
+  DOCTOR
+  NURSE
+}
+
+enum FallSeverity {
+  MINOR
+  MODERATE
+  SEVERE
+  EMERGENCY
+}
+
+enum CareNoteCategory {
+  MEDICAL
+  DAILY_CARE
+  EMOTIONAL
+  NUTRITION
+  MOBILITY
+  SOCIAL
+  FINANCIAL
+  OTHER
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model FamilyMember {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  name              String
+  phone             String
+  role              FamilyRole
+  notificationPrefs Json
+  seniors           Senior[]   @relation("PrimaryContact")
+  careNotes         CareNote[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Senior {
+  id                String            @id @default(cuid())
+  name              String
+  dateOfBirth       DateTime
+  address           String
+  primaryContactId  String
+  primaryContact    FamilyMember      @relation("PrimaryContact", fields: [primaryContactId], references: [id])
+  medicalConditions String[]
+  bloodType         String?
+  allergies         String[]
+  photoUrl          String?
+  medications       Medication[]
+  fallDetections    FallDetection[]
+  dailyCheckIns     DailyCheckIn[]
+  appointments      Appointment[]
+  emergencyContacts EmergencyContact[]
+  careNotes         CareNote[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model Medication {
+  id           String          @id @default(cuid())
+  seniorId     String
+  senior       Senior          @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  name         String
+  dosage       String
+  frequency    String
+  timeOfDay    String[]
+  prescribedBy String
+  pharmacy     String?
+  refillDate   DateTime?
+  instructions String?
+  sideEffects  String?
+  logs         MedicationLog[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model MedicationLog {
+  id             String    @id @default(cuid())
+  medicationId   String
+  medication     Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime
+  takenAt        DateTime?
+  skipped        Boolean   @default(false)
+  skipReason     String?
+  administeredBy String?
+  createdAt      DateTime  @default(now())
+}
+
+model FallDetection {
+  id          String       @id @default(cuid())
+  seniorId    String
+  senior      Senior       @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  detectedAt  DateTime     @default(now())
+  location    String
+  severity    FallSeverity
+  responded   Boolean      @default(false)
+  respondedBy String?
+  falseAlarm  Boolean      @default(false)
+  notes       String?
+}
+
+model DailyCheckIn {
+  id            String   @id @default(cuid())
+  seniorId      String
+  senior        Senior   @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  date          DateTime @db.Date
+  mood          Int
+  painLevel     Int
+  appetiteLevel Int
+  mobilityLevel Int
+  notes         String?
+  checkedInBy   String?
+  createdAt     DateTime @default(now())
+}
+
+model Appointment {
+  id             String   @id @default(cuid())
+  seniorId       String
+  senior         Senior   @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  title          String
+  doctorName     String
+  specialty      String?
+  datetime       DateTime
+  location       String
+  notes          String?
+  transportation String?
+  reminderSent   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model EmergencyContact {
+  id           String @id @default(cuid())
+  seniorId     String
+  senior       Senior @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  relationship String
+  priority     Int
+}
+
+model CareNote {
+  id        String           @id @default(cuid())
+  seniorId  String
+  senior    Senior           @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    FamilyMember     @relation(fields: [authorId], references: [id])
+  note      String
+  category  CareNoteCategory
+  createdAt DateTime         @default(now())
+}

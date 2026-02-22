@@ -1,0 +1,151 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum MemoryType {
+  VIDEO
+  PHOTO
+  AUDIO
+  NOTE
+}
+
+enum TagType {
+  AUTO
+  MANUAL
+}
+
+enum StoryTheme {
+  YEAR_IN_REVIEW
+  TRIP
+  BIRTHDAY
+  GROWTH
+  FRIENDSHIP
+  FAMILY
+  CUSTOM
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  storageUsedBytes BigInt   @default(0)
+  plan             String   @default("free")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  memories     Memory[]
+  persons      Person[]
+  stories      Story[]
+  timeCapsules TimeCapsule[]
+}
+
+model Memory {
+  id           String     @id @default(cuid())
+  userId       String
+  type         MemoryType
+  fileUrl      String?
+  thumbnailUrl String?
+  capturedAt   DateTime?
+  location     Json?
+  description  String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memoryTags    MemoryTag[]
+  memoryPersons MemoryPerson[]
+
+  @@index([userId])
+  @@index([capturedAt])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  type      TagType  @default(MANUAL)
+  createdAt DateTime @default(now())
+
+  memoryTags MemoryTag[]
+}
+
+model MemoryTag {
+  id       String @id @default(cuid())
+  memoryId String
+  tagId    String
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([memoryId, tagId])
+}
+
+model Person {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  photoUrl     String?
+  relationship String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memoryPersons MemoryPerson[]
+
+  @@index([userId])
+}
+
+model MemoryPerson {
+  id         String @id @default(cuid())
+  memoryId   String
+  personId   String
+  confidence Float? @default(1.0)
+
+  memory Memory @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([memoryId, personId])
+}
+
+model Story {
+  id                 String     @id @default(cuid())
+  userId             String
+  title              String
+  theme              StoryTheme @default(CUSTOM)
+  memoriesOrder      Json?
+  generatedNarrative String?
+  coverImageUrl      String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TimeCapsule {
+  id             String    @id @default(cuid())
+  userId         String
+  title          String
+  unlockDate     DateTime
+  memories       Json?
+  message        String?
+  recipientEmail String?
+  opened         Boolean   @default(false)
+  openedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([unlockDate])
+}

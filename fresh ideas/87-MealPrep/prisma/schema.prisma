@@ -1,0 +1,203 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum PrepTaskType {
+  CHOP
+  MARINATE
+  COOK
+  BAKE
+  ASSEMBLE
+  REST
+  STORE
+}
+
+enum DietaryTag {
+  VEGETARIAN
+  VEGAN
+  GLUTEN_FREE
+  DAIRY_FREE
+  NUT_FREE
+  KETO
+  PALEO
+  LOW_CARB
+  HIGH_PROTEIN
+  HALAL
+  KOSHER
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum Unit {
+  TSP
+  TBSP
+  CUP
+  OZ
+  LB
+  G
+  KG
+  ML
+  L
+  PIECE
+  CLOVE
+  BUNCH
+  PINCH
+  WHOLE
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String
+  password      String
+  avatar        String?
+  dietaryPrefs  DietaryTag[]
+  servingSize   Int        @default(2)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  prepPlans     PrepPlan[]
+  recipes       Recipe[]
+
+  @@index([email])
+}
+
+model PrepPlan {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  date         DateTime
+  endDate      DateTime?
+  servings     Int           @default(4)
+  totalPrepTime Int?
+  totalCookTime Int?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  recipes      PlanRecipe[]
+  prepSteps    PrepStep[]
+  groceryList  GroceryList?
+
+  @@index([userId])
+  @@index([date])
+}
+
+model Recipe {
+  id            String       @id @default(cuid())
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name          String
+  description   String?
+  prepTime      Int
+  cookTime      Int
+  totalTime     Int?
+  servings      Int
+  calories      Int?
+  protein       Float?
+  carbs         Float?
+  fat           Float?
+  ingredients   Json
+  instructions  Json
+  image         String?
+  tags          DietaryTag[]
+  mealType      MealType[]
+  cuisine       String?
+  difficulty    Int          @default(3)
+  rating        Float?
+  source        String?
+  isPublic      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  planRecipes   PlanRecipe[]
+
+  @@index([name])
+  @@index([userId])
+  @@index([cuisine])
+}
+
+model PlanRecipe {
+  id       String   @id @default(cuid())
+  planId   String
+  plan     PrepPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  recipeId String
+  recipe   Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  mealType MealType?
+  day      Int?
+  scale    Float    @default(1.0)
+
+  @@unique([planId, recipeId, day])
+  @@index([planId])
+}
+
+model PrepStep {
+  id          String       @id @default(cuid())
+  planId      String
+  plan        PrepPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  recipeRef   String?
+  order       Int
+  task        String
+  taskType    PrepTaskType
+  duration    Int
+  startOffset Int          @default(0)
+  equipment   String[]
+  notes       String?
+  completed   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  timers      Timer[]
+
+  @@index([planId])
+  @@index([order])
+}
+
+model Timer {
+  id       String   @id @default(cuid())
+  stepId   String
+  step     PrepStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  duration Int
+  label    String
+  alert    String   @default("BEEP")
+  started  Boolean  @default(false)
+  startedAt DateTime?
+
+  @@index([stepId])
+}
+
+model GroceryList {
+  id        String        @id @default(cuid())
+  planId    String        @unique
+  plan      PrepPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  items     GroceryItem[]
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model GroceryItem {
+  id            String      @id @default(cuid())
+  groceryListId String
+  groceryList   GroceryList @relation(fields: [groceryListId], references: [id], onDelete: Cascade)
+  name          String
+  quantity      Float
+  unit          Unit?
+  category      String?
+  checked       Boolean     @default(false)
+  inPantry      Boolean     @default(false)
+  estimatedCost Float?
+
+  @@index([groceryListId])
+  @@index([category])
+}

@@ -1,0 +1,134 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum ReportType {
+  POOR_LIGHTING
+  CRIME_INCIDENT
+  HARASSMENT
+  UNSAFE_CROSSING
+  CONSTRUCTION
+  SUSPICIOUS_ACTIVITY
+}
+
+enum AlertType {
+  PANIC_BUTTON
+  ROUTE_DEVIATION
+  NO_MOVEMENT
+  AUTO_DETECT
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id                String         @id @default(cuid())
+  email             String         @unique
+  name              String
+  homeLocation      Json?          // { lat, lng, address }
+  emergencyContacts Json?          // Array of { name, phone, email, relationship }
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  routes            Route[]
+  safetyReports     SafetyReport[]
+  liveWalks         LiveWalk[]
+}
+
+model Route {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startLat      Float
+  startLng      Float
+  endLat        Float
+  endLng        Float
+  safetyScore   Float    // 0-100
+  distance      Float    // meters
+  estimatedMins Int
+  waypoints     Json     // Array of { lat, lng }
+  avoidAreas    Json?    // Array of { lat, lng, radius }
+  createdAt     DateTime @default(now())
+
+  liveWalks     LiveWalk[]
+
+  @@index([userId])
+  @@index([startLat, startLng, endLat, endLng])
+}
+
+model SafetyReport {
+  id            String     @id @default(cuid())
+  lat           Float
+  lng           Float
+  type          ReportType
+  severity      Severity   @default(MEDIUM)
+  description   String?
+  reportedById  String
+  reportedBy    User       @relation(fields: [reportedById], references: [id])
+  verifiedCount Int        @default(0)
+  timestamp     DateTime   @default(now())
+  createdAt     DateTime   @default(now())
+
+  @@index([lat, lng])
+  @@index([type, timestamp])
+}
+
+model AreaSafetyScore {
+  id            String   @id @default(cuid())
+  gridLat       Float
+  gridLng       Float
+  overallScore  Float    // 0-100
+  crimeScore    Float    // 0-100
+  lightingScore Float    // 0-100
+  crowdScore    Float    // 0-100
+  lastUpdated   DateTime @default(now())
+
+  @@unique([gridLat, gridLng])
+  @@index([gridLat, gridLng])
+}
+
+model LiveWalk {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routeId        String?
+  route          Route?           @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  startedAt      DateTime         @default(now())
+  currentLat     Float?
+  currentLng     Float?
+  sharedWith     String[]         // email addresses or phone numbers
+  completedAt    DateTime?
+  panicTriggered Boolean          @default(false)
+  updatedAt      DateTime         @updatedAt
+
+  emergencyAlerts EmergencyAlert[]
+
+  @@index([userId, startedAt])
+}
+
+model EmergencyAlert {
+  id               String    @id @default(cuid())
+  liveWalkId       String
+  liveWalk         LiveWalk  @relation(fields: [liveWalkId], references: [id], onDelete: Cascade)
+  lat              Float
+  lng              Float
+  alertType        AlertType
+  notifiedContacts Json      // Array of contacts that were notified
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([liveWalkId])
+}

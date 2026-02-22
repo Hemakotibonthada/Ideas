@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String?
+  name           String?
+  image          String?
+  role           String   @default("OWNER")
+  createdAt      DateTime @default(now())
+  businesses     BusinessMember[]
+}
+
+model Business {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String?  @db.Text
+  logo           String?
+  coverImage     String?
+  phone          String?
+  email          String?
+  website        String?
+  address        String
+  city           String
+  state          String?
+  country        String   @default("US")
+  zipCode        String?
+  latitude       Float?
+  longitude      Float?
+  timezone       String   @default("America/New_York")
+  currency       String   @default("USD")
+  category       String   // salon, clinic, spa, fitness, consulting, etc.
+  plan           String   @default("FREE")
+  stripeAccountId String?
+  bookingUrl     String?  @unique
+  minBookingNotice Int    @default(60)   // minutes
+  maxBookingAdvance Int   @default(30)   // days
+  cancellationPolicy String? @db.Text
+  autoConfirm    Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  members        BusinessMember[]
+  services       Service[]
+  staff          Staff[]
+  bookings       Booking[]
+  customers      Customer[]
+  schedules      BusinessSchedule[]
+  reviews        Review[]
+  coupons        Coupon[]
+
+  @@index([slug])
+  @@index([category])
+}
+
+model BusinessMember {
+  id         String @id @default(cuid())
+  role       String @default("STAFF") // OWNER, ADMIN, STAFF
+  user       User   @relation(fields: [userId], references: [id])
+  userId     String
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+
+  @@unique([userId, businessId])
+}
+
+model BusinessSchedule {
+  id         String  @id @default(cuid())
+  dayOfWeek  Int     // 0=Sunday, 6=Saturday
+  isOpen     Boolean @default(true)
+  openTime   String  @default("09:00")
+  closeTime  String  @default("17:00")
+  breakStart String?
+  breakEnd   String?
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+
+  @@unique([businessId, dayOfWeek])
+}
+
+// ==================== SERVICES & STAFF ====================
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  duration    Int      // minutes
+  bufferTime  Int      @default(0)  // minutes between appointments
+  price       Float
+  currency    String   @default("USD")
+  color       String   @default("#3b82f6")
+  category    String?
+  isActive    Boolean  @default(true)
+  maxCapacity Int      @default(1)  // for group sessions
+  requiresDeposit Boolean @default(false)
+  depositAmount Float?
+  sortOrder   Int      @default(0)
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  staffServices StaffService[]
+  bookings    Booking[]
+
+  @@index([businessId])
+}
+
+model Staff {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  avatar      String?
+  bio         String?  @db.Text
+  isActive    Boolean  @default(true)
+  color       String   @default("#6366f1")
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  services    StaffService[]
+  schedules   StaffSchedule[]
+  bookings    Booking[]
+  breaks      StaffBreak[]
+
+  @@index([businessId])
+}
+
+model StaffService {
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId   String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId String
+
+  @@id([staffId, serviceId])
+}
+
+model StaffSchedule {
+  id        String  @id @default(cuid())
+  dayOfWeek Int
+  isWorking Boolean @default(true)
+  startTime String  @default("09:00")
+  endTime   String  @default("17:00")
+  staff     Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId   String
+
+  @@unique([staffId, dayOfWeek])
+}
+
+model StaffBreak {
+  id        String   @id @default(cuid())
+  title     String   @default("Break")
+  startTime DateTime
+  endTime   DateTime
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  staffId   String
+}
+
+// ==================== BOOKINGS ====================
+
+model Customer {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  notes      String?
+  totalVisits Int     @default(0)
+  totalSpent Float    @default(0)
+  lastVisit  DateTime?
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  bookings   Booking[]
+  reviews    Review[]
+
+  @@unique([businessId, email])
+  @@index([businessId])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  startTime       DateTime
+  endTime         DateTime
+  status          BookingStatus @default(PENDING)
+  notes           String?
+  internalNotes   String?
+  totalPrice      Float
+  depositPaid     Float         @default(0)
+  cancellationReason String?
+  reminderSent    Boolean       @default(false)
+  confirmationToken String?     @unique
+  stripePaymentId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  service         Service       @relation(fields: [serviceId], references: [id])
+  serviceId       String
+  staff           Staff?        @relation(fields: [staffId], references: [id])
+  staffId         String?
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  customerId      String
+  business        Business      @relation(fields: [businessId], references: [id])
+  businessId      String
+  coupon          Coupon?       @relation(fields: [couponId], references: [id])
+  couponId        String?
+
+  @@index([businessId])
+  @@index([staffId])
+  @@index([startTime])
+  @@index([status])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Coupon {
+  id          String    @id @default(cuid())
+  code        String
+  discount    Float
+  discountType String   @default("PERCENTAGE") // PERCENTAGE, FIXED
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  validFrom   DateTime  @default(now())
+  validUntil  DateTime?
+  isActive    Boolean   @default(true)
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String
+  bookings    Booking[]
+
+  @@unique([businessId, code])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rating     Int      // 1-5
+  comment    String?  @db.Text
+  reply      String?
+  isPublic   Boolean  @default(true)
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}

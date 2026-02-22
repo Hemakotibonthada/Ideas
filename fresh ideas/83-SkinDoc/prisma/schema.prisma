@@ -1,0 +1,173 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum BodyArea {
+  FACE
+  NECK
+  ARM
+  LEG
+  BACK
+  CHEST
+  HAND
+  SCALP
+}
+
+enum SkinConditionSeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+enum ConsultationStatus {
+  REQUESTED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Role {
+  USER
+  DERMATOLOGIST
+  ADMIN
+}
+
+enum SkinType {
+  DRY
+  OILY
+  COMBINATION
+  NORMAL
+  SENSITIVE
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  password       String
+  role           Role            @default(USER)
+  dateOfBirth    DateTime?
+  skinType       SkinType?
+  knownAllergies String[]
+  avatar         String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  skinScans      SkinScan[]
+  consultations  Consultation[]  @relation("Patient")
+  dermatologistConsultations Consultation[] @relation("Dermatologist")
+  skinLogs       SkinLog[]
+
+  @@index([email])
+}
+
+model SkinScan {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  image        String
+  thumbnail    String?
+  date         DateTime  @default(now())
+  aiDiagnosis  String?
+  confidence   Float?
+  bodyArea     BodyArea
+  notes        String?
+  metadata     Json?
+  results      ScanResult[]
+  consultations Consultation[]
+
+  @@index([userId])
+  @@index([date])
+  @@index([bodyArea])
+}
+
+model Condition {
+  id               String                @id @default(cuid())
+  name             String                @unique
+  description      String
+  severity         SkinConditionSeverity
+  treatmentOptions String[]
+  commonTriggers   String[]
+  symptoms         String[]
+  prevalence       String?
+  icdCode          String?
+  imageExamples    String[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  scanResults      ScanResult[]
+
+  @@index([name])
+  @@index([severity])
+}
+
+model ScanResult {
+  id           String    @id @default(cuid())
+  scanId       String
+  scan         SkinScan  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  conditionId  String
+  condition    Condition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  probability  Float
+  rank         Int       @default(1)
+  details      String?
+  createdAt    DateTime  @default(now())
+
+  @@unique([scanId, conditionId])
+  @@index([scanId])
+  @@index([probability])
+}
+
+model Consultation {
+  id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation("Patient", fields: [userId], references: [id], onDelete: Cascade)
+  scanId           String?
+  scan             SkinScan?          @relation(fields: [scanId], references: [id], onDelete: SetNull)
+  dermatologistId  String
+  dermatologist    User               @relation("Dermatologist", fields: [dermatologistId], references: [id], onDelete: Cascade)
+  status           ConsultationStatus @default(REQUESTED)
+  notes            String?
+  diagnosis        String?
+  prescription     String?
+  followUpDate     DateTime?
+  scheduledAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([dermatologistId])
+  @@index([status])
+}
+
+model SkinLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  bodyArea    BodyArea
+  condition   String?
+  severity    Int?
+  triggers    String[]
+  products    String[]
+  diet        String?
+  stress      Int?
+  sleep       Float?
+  hydration   Int?
+  weather     String?
+  notes       String?
+  photos      String[]
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([date])
+  @@index([bodyArea])
+}

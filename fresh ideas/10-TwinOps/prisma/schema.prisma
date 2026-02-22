@@ -1,0 +1,219 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum AssetType {
+  HVAC
+  PUMP
+  MOTOR
+  COMPRESSOR
+  TURBINE
+  CONVEYOR
+  GENERATOR
+  BOILER
+  TRANSFORMER
+}
+
+enum AssetStatus {
+  OPERATIONAL
+  DEGRADED
+  WARNING
+  CRITICAL
+  OFFLINE
+  MAINTENANCE
+  DECOMMISSIONED
+}
+
+enum SensorType {
+  TEMPERATURE
+  VIBRATION
+  PRESSURE
+  FLOW_RATE
+  HUMIDITY
+  POWER_CONSUMPTION
+  RPM
+  NOISE_LEVEL
+  OIL_QUALITY
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderStatus {
+  OPEN
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ── Models ────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  assets     Asset[]
+  dashboards Dashboard[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String       @unique
+  name           String
+  role           Role         @default(MEMBER)
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  assignedWorkOrders WorkOrder[]
+}
+
+model Asset {
+  id                  String      @id @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                String
+  type                AssetType
+  model3dUrl          String?
+  location            String?
+  installDate         DateTime?
+  lastMaintenanceDate DateTime?
+  status              AssetStatus @default(OPERATIONAL)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  sensors          Sensor[]
+  digitalTwin      DigitalTwin?
+  predictiveAlerts PredictiveAlert[]
+  workOrders       WorkOrder[]
+}
+
+model Sensor {
+  id            String     @id @default(cuid())
+  assetId       String
+  asset         Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  sensorType    SensorType
+  unit          String
+  thresholdMin  Float?
+  thresholdMax  Float?
+  lastReading   Float?
+  lastReadingAt DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  readings SensorReading[]
+}
+
+model SensorReading {
+  id              String   @id @default(cuid())
+  sensorId        String
+  sensor          Sensor   @relation(fields: [sensorId], references: [id], onDelete: Cascade)
+  value           Float
+  timestamp       DateTime @default(now())
+  anomalyDetected Boolean  @default(false)
+}
+
+model DigitalTwin {
+  id           String   @id @default(cuid())
+  assetId      String   @unique
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  modelVersion String
+  sceneConfig  Json
+  lastSyncAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model PredictiveAlert {
+  id               String        @id @default(cuid())
+  assetId          String
+  asset            Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  predictedFailure String
+  probability      Float
+  estimatedDate    DateTime?
+  severity         AlertSeverity
+  acknowledged     Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model WorkOrder {
+  id            String            @id @default(cuid())
+  assetId       String
+  asset         Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  priority      WorkOrderPriority @default(MEDIUM)
+  assignedToId  String?
+  assignedTo    User?             @relation(fields: [assignedToId], references: [id])
+  status        WorkOrderStatus   @default(OPEN)
+  scheduledDate DateTime?
+  completedDate DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  maintenanceLog MaintenanceLog?
+}
+
+model MaintenanceLog {
+  id          String    @id @default(cuid())
+  workOrderId String    @unique
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  technician  String
+  notes       String?
+  partsUsed   Json?
+  laborHours  Float
+  completedAt DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Dashboard {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  layout         Json
+  isDefault      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}

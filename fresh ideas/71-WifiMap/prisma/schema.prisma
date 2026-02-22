@@ -1,0 +1,109 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum HotspotType {
+  CAFE
+  LIBRARY
+  RESTAURANT
+  HOTEL
+  PUBLIC
+  COWORKING
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  speedTests SpeedTest[]
+  reviews    Review[]
+  favorites  Favorite[]
+
+  @@index([email])
+}
+
+model Hotspot {
+  id        String      @id @default(cuid())
+  name      String
+  lat       Float
+  lng       Float
+  address   String
+  speedMbps Float?
+  password  String?
+  free      Boolean     @default(true)
+  verified  Boolean     @default(false)
+  type      HotspotType @default(PUBLIC)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  speedTests SpeedTest[]
+  reviews    Review[]
+  favorites  Favorite[]
+
+  @@index([lat, lng])
+  @@index([type])
+  @@index([verified])
+  @@index([free])
+}
+
+model SpeedTest {
+  id            String   @id @default(cuid())
+  downloadSpeed Float
+  uploadSpeed   Float
+  latency       Float
+  timestamp     DateTime @default(now())
+
+  hotspot   Hotspot @relation(fields: [hotspotId], references: [id], onDelete: Cascade)
+  hotspotId String
+  tester    User    @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  testerId  String
+
+  @@index([hotspotId])
+  @@index([testerId])
+  @@index([timestamp])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hotspot    Hotspot @relation(fields: [hotspotId], references: [id], onDelete: Cascade)
+  hotspotId  String
+  reviewer   User    @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+
+  @@unique([hotspotId, reviewerId])
+  @@index([hotspotId])
+  @@index([reviewerId])
+  @@index([rating])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  hotspot   Hotspot @relation(fields: [hotspotId], references: [id], onDelete: Cascade)
+  hotspotId String
+
+  @@unique([userId, hotspotId])
+  @@index([userId])
+  @@index([hotspotId])
+}

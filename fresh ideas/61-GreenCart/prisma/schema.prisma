@@ -1,0 +1,137 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum EcoCategory {
+  CLEANING
+  FOOD
+  BEAUTY
+  FASHION
+  HOME
+  ELECTRONICS
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  name        String
+  avatarUrl   String?
+  role        Role          @default(USER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  swapHistory SwapHistory[]
+  wishlists   Wishlist[]
+
+  @@index([email])
+}
+
+model Product {
+  id           String       @id @default(cuid())
+  name         String
+  brand        String
+  category     EcoCategory
+  ecoScore     Int          @default(0) // 0-100
+  price        Decimal      @db.Decimal(10, 2)
+  description  String?
+  imageUrl     String?
+  barcode      String?      @unique
+  ingredients  String?
+  certifications String[]
+  available    Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  originAlternatives    Alternative[] @relation("OriginalProduct")
+  replacementAlternatives Alternative[] @relation("ReplacementProduct")
+  swapHistoryOriginal   SwapHistory[] @relation("OriginalSwap")
+  swapHistoryAlternative SwapHistory[] @relation("AlternativeSwap")
+  wishlistItems         WishlistItem[]
+
+  @@index([category])
+  @@index([ecoScore])
+  @@index([brand])
+  @@index([name, brand])
+}
+
+model Alternative {
+  id              String   @id @default(cuid())
+  originalId      String
+  replacementId   String
+  savingsPercent  Float
+  ecoImprovement  Int      // improvement in eco score points
+  reason          String?
+  verified        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  original    Product @relation("OriginalProduct", fields: [originalId], references: [id], onDelete: Cascade)
+  replacement Product @relation("ReplacementProduct", fields: [replacementId], references: [id], onDelete: Cascade)
+
+  @@unique([originalId, replacementId])
+  @@index([originalId])
+  @@index([replacementId])
+  @@index([ecoImprovement(sort: Desc)])
+}
+
+model SwapHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  originalId    String
+  alternativeId String
+  date          DateTime @default(now())
+  savings       Decimal? @db.Decimal(10, 2)
+  ecoGain       Int?
+  notes         String?
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  original    Product @relation("OriginalSwap", fields: [originalId], references: [id])
+  alternative Product @relation("AlternativeSwap", fields: [alternativeId], references: [id])
+
+  @@index([userId])
+  @@index([date(sort: Desc)])
+  @@index([userId, date(sort: Desc)])
+}
+
+model Wishlist {
+  id        String         @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  items     WishlistItem[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  productId  String
+  addedAt    DateTime @default(now())
+  notes      String?
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+  @@index([wishlistId])
+  @@index([productId])
+}

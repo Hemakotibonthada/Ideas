@@ -1,0 +1,170 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum BookCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum Genre {
+  FICTION
+  NONFICTION
+  SCIFI
+  MYSTERY
+  ROMANCE
+  BIOGRAPHY
+  HISTORY
+  SELF_HELP
+  TECH
+}
+
+enum SwapStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  MUST_READ
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String
+  username     String        @unique
+  avatarUrl    String?
+  bio          String?
+  city         String?
+  lat          Float?
+  lng          Float?
+  swapRadius   Int           @default(25) // km
+  booksSwapped Int           @default(0)
+  rating       Float         @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  books        Book[]
+  swapRequests SwapRequest[] @relation("Requester")
+  readingList  ReadingList[]
+  reviews      Review[]
+
+  @@index([email])
+  @@index([username])
+  @@index([city])
+  @@index([lat, lng])
+}
+
+model Book {
+  id           String        @id @default(cuid())
+  ownerId      String
+  title        String
+  author       String
+  isbn         String?
+  genre        Genre
+  condition    BookCondition
+  coverUrl     String?
+  description  String?
+  pageCount    Int?
+  publisher    String?
+  publishYear  Int?
+  language     String        @default("en")
+  available    Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  swapRequests    SwapRequest[] @relation("RequestedBook")
+  offeredInSwaps  SwapRequest[] @relation("OfferedBook")
+  readingListEntries ReadingList[]
+  reviews         Review[]
+
+  @@index([ownerId])
+  @@index([genre])
+  @@index([condition])
+  @@index([available])
+  @@index([isbn])
+  @@index([title])
+  @@index([author])
+  @@index([genre, available])
+  @@index([ownerId, available])
+}
+
+model SwapRequest {
+  id            String     @id @default(cuid())
+  requesterId   String
+  bookId        String
+  offeredBookId String?
+  status        SwapStatus @default(PENDING)
+  message       String?
+  responseMsg   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  requester   User @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  book        Book @relation("RequestedBook", fields: [bookId], references: [id], onDelete: Cascade)
+  offeredBook Book? @relation("OfferedBook", fields: [offeredBookId], references: [id])
+
+  @@index([requesterId])
+  @@index([bookId])
+  @@index([status])
+  @@index([requesterId, status])
+  @@index([createdAt(sort: Desc)])
+}
+
+model ReadingList {
+  id        String       @id @default(cuid())
+  userId    String
+  bookId    String
+  priority  ReadPriority @default(MEDIUM)
+  notes     String?
+  read      Boolean      @default(false)
+  readDate  DateTime?
+  addedAt   DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([userId, read])
+  @@index([priority])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  bookId     String
+  reviewerId String
+  rating     Int      // 1-5
+  comment    String?
+  spoiler    Boolean  @default(false)
+  helpful    Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  book     Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  reviewer User @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, reviewerId])
+  @@index([bookId])
+  @@index([reviewerId])
+  @@index([rating])
+  @@index([createdAt(sort: Desc)])
+}

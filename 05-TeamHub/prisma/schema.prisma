@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String?
+  role           String   @default("EMPLOYEE")
+  createdAt      DateTime @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  employee       Employee?
+}
+
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  logo         String?
+  address      String?
+  country      String   @default("US")
+  timezone     String   @default("America/New_York")
+  workDaysPerWeek Int   @default(5)
+  workHoursPerDay Float @default(8)
+  fiscalYearStart Int   @default(1) // month
+  createdAt    DateTime @default(now())
+  users        User[]
+  employees    Employee[]
+  departments  Department[]
+  positions    Position[]
+  leaveTypes   LeaveType[]
+  holidays     Holiday[]
+  payrollRuns  PayrollRun[]
+  announcements Announcement[]
+  policies     Policy[]
+}
+
+// ==================== EMPLOYEE MANAGEMENT ====================
+
+model Employee {
+  id             String   @id @default(cuid())
+  employeeId     String   // EMP-001
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  dateOfBirth    DateTime?
+  gender         String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  nationality    String?
+  emergencyContact String?
+  emergencyPhone String?
+  avatar         String?
+  hireDate       DateTime
+  terminationDate DateTime?
+  employmentType EmploymentType @default(FULL_TIME)
+  status         EmployeeStatus @default(ACTIVE)
+  salary         Float    @default(0)
+  salaryFrequency String  @default("MONTHLY") // MONTHLY, BIWEEKLY, WEEKLY
+  bankName       String?
+  bankAccount    String?
+  taxId          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User?    @relation(fields: [userId], references: [id])
+  userId         String?  @unique
+  department     Department? @relation(fields: [departmentId], references: [id])
+  departmentId   String?
+  position       Position? @relation(fields: [positionId], references: [id])
+  positionId     String?
+  manager        Employee? @relation("ManagerReports", fields: [managerId], references: [id])
+  managerId      String?
+  reports        Employee[] @relation("ManagerReports")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  leaveRequests  LeaveRequest[]
+  attendances    Attendance[]
+  payslips       Payslip[]
+  documents      Document[]
+  reviews        PerformanceReview[] @relation("EmployeeReviews")
+  reviewsGiven   PerformanceReview[] @relation("ReviewerReviews")
+  trainings      EmployeeTraining[]
+  expenses       Expense[]
+
+  @@unique([organizationId, employeeId])
+  @@index([organizationId])
+  @@index([departmentId])
+  @@index([status])
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  FREELANCE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  TERMINATED
+  RESIGNED
+}
+
+model Department {
+  id             String   @id @default(cuid())
+  name           String
+  code           String
+  description    String?
+  headId         String?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  employees      Employee[]
+  positions      Position[]
+
+  @@unique([organizationId, code])
+}
+
+model Position {
+  id             String   @id @default(cuid())
+  title          String
+  level          String?  // Junior, Mid, Senior, Lead, Manager, Director, VP, C-Level
+  minSalary      Float?
+  maxSalary      Float?
+  description    String?  @db.Text
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  department     Department? @relation(fields: [departmentId], references: [id])
+  departmentId   String?
+  employees      Employee[]
+
+  @@index([organizationId])
+}
+
+// ==================== LEAVE MANAGEMENT ====================
+
+model LeaveType {
+  id              String   @id @default(cuid())
+  name            String   // Annual Leave, Sick Leave, etc.
+  daysPerYear     Int      @default(20)
+  carryForward    Boolean  @default(false)
+  maxCarryDays    Int?
+  requiresApproval Boolean @default(true)
+  isPaid          Boolean  @default(true)
+  color           String   @default("#3b82f6")
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  leaveRequests   LeaveRequest[]
+}
+
+model LeaveRequest {
+  id          String      @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  totalDays   Float
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  rejectedReason String?
+  employee    Employee    @relation(fields: [employeeId], references: [id])
+  employeeId  String
+  leaveType   LeaveType   @relation(fields: [leaveTypeId], references: [id])
+  leaveTypeId String
+  createdAt   DateTime    @default(now())
+
+  @@index([employeeId])
+  @@index([status])
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Holiday {
+  id             String   @id @default(cuid())
+  name           String
+  date           DateTime
+  isRecurring    Boolean  @default(false)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+}
+
+// ==================== ATTENDANCE ====================
+
+model Attendance {
+  id         String    @id @default(cuid())
+  date       DateTime
+  clockIn    DateTime
+  clockOut   DateTime?
+  breakTime  Int       @default(0) // minutes
+  totalHours Float?
+  overtime   Float     @default(0)
+  status     String    @default("PRESENT") // PRESENT, LATE, HALF_DAY, ABSENT
+  notes      String?
+  ipAddress  String?
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  employeeId String
+  createdAt  DateTime  @default(now())
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
+}
+
+// ==================== PAYROLL ====================
+
+model PayrollRun {
+  id             String   @id @default(cuid())
+  period         String   // "2026-02"
+  startDate      DateTime
+  endDate        DateTime
+  status         String   @default("DRAFT") // DRAFT, PROCESSING, APPROVED, PAID
+  totalGross     Float    @default(0)
+  totalDeductions Float   @default(0)
+  totalNet       Float    @default(0)
+  processedAt    DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  payslips       Payslip[]
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
+
+model Payslip {
+  id           String     @id @default(cuid())
+  basicSalary  Float
+  overtime     Float      @default(0)
+  bonus        Float      @default(0)
+  allowances   Float      @default(0)
+  grossPay     Float
+  taxDeduction Float      @default(0)
+  insurance    Float      @default(0)
+  otherDeductions Float   @default(0)
+  totalDeductions Float
+  netPay       Float
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+  employeeId   String
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id])
+  payrollRunId String
+  createdAt    DateTime   @default(now())
+
+  @@index([employeeId])
+  @@index([payrollRunId])
+}
+
+// ==================== PERFORMANCE ====================
+
+model PerformanceReview {
+  id          String   @id @default(cuid())
+  period      String   // "Q1 2026"
+  overallRating Float?
+  strengths   String?  @db.Text
+  improvements String? @db.Text
+  goals       String?  @db.Text
+  comments    String?  @db.Text
+  status      String   @default("DRAFT") // DRAFT, SUBMITTED, ACKNOWLEDGED
+  employee    Employee @relation("EmployeeReviews", fields: [employeeId], references: [id])
+  employeeId  String
+  reviewer    Employee @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  reviewerId  String
+  createdAt   DateTime @default(now())
+}
+
+model EmployeeTraining {
+  id          String   @id @default(cuid())
+  title       String
+  provider    String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      String   @default("ENROLLED") // ENROLLED, IN_PROGRESS, COMPLETED
+  certificate String?
+  score       Float?
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  employeeId  String
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  title       String
+  amount      Float
+  category    String
+  receipt     String?
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED, REIMBURSED
+  submittedAt DateTime @default(now())
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  employeeId  String
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  name       String
+  type       String   // CONTRACT, ID, CERTIFICATE, TAX_FORM, OTHER
+  url        String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+  uploadedAt DateTime @default(now())
+}
+
+model Announcement {
+  id             String   @id @default(cuid())
+  title          String
+  content        String   @db.Text
+  priority       String   @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  publishedAt    DateTime @default(now())
+  expiresAt      DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+}
+
+model Policy {
+  id             String   @id @default(cuid())
+  title          String
+  content        String   @db.Text
+  category       String   // HR, IT, FINANCE, GENERAL
+  version        String   @default("1.0")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  updatedAt      DateTime @updatedAt
+}

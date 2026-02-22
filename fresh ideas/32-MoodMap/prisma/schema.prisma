@@ -1,0 +1,174 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum Mood {
+  ECSTATIC
+  HAPPY
+  CONTENT
+  NEUTRAL
+  ANXIOUS
+  SAD
+  ANGRY
+  DEPRESSED
+  OVERWHELMED
+}
+
+enum CBTExerciseType {
+  THOUGHT_RECORD
+  BEHAVIORAL_ACTIVATION
+  COGNITIVE_RESTRUCTURING
+  MINDFULNESS
+  BREATHING
+  GROUNDING
+  EXPOSURE
+  GRATITUDE
+  SELF_COMPASSION
+}
+
+enum Weather {
+  SUNNY
+  CLOUDY
+  RAINY
+  STORMY
+  SNOWY
+  WINDY
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  timezone       String?
+  therapistEmail String?
+  privacyLevel   String   @default("private")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  journalEntries   JournalEntry[]
+  moodPatterns     MoodPattern[]
+  userExercises    UserExercise[]
+  therapistReports TherapistReport[]
+  gratitudeEntries GratitudeEntry[]
+  copingStrategies CopingStrategy[]
+}
+
+model JournalEntry {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime @default(now())
+  mood         Mood
+  moodScore    Int
+  energyLevel  Int?
+  anxietyLevel Int?
+  text         String?
+  tags         String[]
+  activities   String[]
+  weather      Weather?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([mood])
+}
+
+model MoodPattern {
+  id            String   @id @default(cuid())
+  userId        String
+  pattern       String
+  description   String?
+  triggers      String[]
+  frequency     Int      @default(1)
+  firstDetected DateTime @default(now())
+  lastDetected  DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CBTExercise {
+  id           String          @id @default(cuid())
+  title        String
+  type         CBTExerciseType
+  description  String
+  instructions Json
+  durationMins Int
+  difficulty   Int             @default(1)
+  createdAt    DateTime        @default(now())
+
+  userExercises UserExercise[]
+}
+
+model UserExercise {
+  id                 String      @id @default(cuid())
+  userId             String
+  exerciseId         String
+  completedAt        DateTime    @default(now())
+  responses          Json?
+  helpfulnessRating  Int?
+
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise           CBTExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([exerciseId])
+}
+
+model TherapistReport {
+  id                 String   @id @default(cuid())
+  userId             String
+  period             String
+  moodAvg            Float?
+  moodTrend          String?
+  topTriggers        Json?
+  exercisesCompleted Int      @default(0)
+  insights           Json?
+  pdfUrl             String?
+  generatedAt        DateTime @default(now())
+
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([generatedAt])
+}
+
+model GratitudeEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime @default(now())
+  items     String[]
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+}
+
+model CopingStrategy {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  effectiveness Int?
+  timesUsed     Int      @default(0)
+  category      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

@@ -1,0 +1,235 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  HR_MANAGER
+  MANAGER
+  VIEWER
+}
+
+enum SignalType {
+  AFTER_HOURS_WORK
+  MEETING_OVERLOAD
+  MESSAGE_SENTIMENT_DROP
+  PR_VELOCITY_CHANGE
+  PTO_PATTERN_CHANGE
+  CALENDAR_FRAGMENTATION
+  SLACK_RESPONSE_TIME
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IntegrationProvider {
+  SLACK
+  GITHUB
+  JIRA
+  GOOGLE_CALENDAR
+  MICROSOFT_365
+  LINEAR
+}
+
+// ─── Organization ────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                 User[]
+  employees             Employee[]
+  departments           Department[]
+  integrationConnections IntegrationConnection[]
+
+  @@map("organizations")
+}
+
+// ─── User ────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  avatarUrl      String?
+  role           Role     @default(VIEWER)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  acknowledgedAlerts Alert[]     @relation("AcknowledgedBy")
+
+  @@map("users")
+}
+
+// ─── Department ──────────────────────────────────────────
+
+model Department {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  headId         String?  // Department head (Employee)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  head         Employee?    @relation("DepartmentHead", fields: [headId], references: [id])
+  employees    Employee[]
+
+  @@unique([organizationId, name])
+  @@map("departments")
+}
+
+// ─── Employee ────────────────────────────────────────────
+
+model Employee {
+  id             String    @id @default(cuid())
+  email          String
+  name           String
+  title          String?
+  departmentId   String?
+  organizationId String
+  managerId      String?   // Self-reference for reporting chain
+  startDate      DateTime
+  riskScore      Float?    // 0–100, latest composite risk score
+  lastRiskUpdate DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization         Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department           Department?           @relation(fields: [departmentId], references: [id])
+  manager              Employee?             @relation("ManagerReports", fields: [managerId], references: [id])
+  directReports        Employee[]            @relation("ManagerReports")
+  headOfDepartments    Department[]          @relation("DepartmentHead")
+  workSignals          WorkSignal[]
+  burnoutPredictions   BurnoutPrediction[]
+  alerts               Alert[]
+  actionRecommendations ActionRecommendation[]
+
+  @@unique([organizationId, email])
+  @@index([riskScore])
+  @@map("employees")
+}
+
+// ─── WorkSignal ──────────────────────────────────────────
+
+model WorkSignal {
+  id         String     @id @default(cuid())
+  employeeId String
+  signalType SignalType
+  value      Float      // Numeric representation of the signal
+  rawData    Json?      // Original data payload from integration
+  source     String     // e.g. "slack", "github", "jira"
+  timestamp  DateTime   // When the signal occurred
+  createdAt  DateTime   @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, signalType, timestamp])
+  @@index([timestamp])
+  @@map("work_signals")
+}
+
+// ─── BurnoutPrediction ───────────────────────────────────
+
+model BurnoutPrediction {
+  id                     String   @id @default(cuid())
+  employeeId             String
+  riskScore              Float    // 0–100
+  predictedAttritionDate DateTime?
+  topFactors             Json     // Array of contributing factors with weights
+  modelVersion           String?  // Which ML model version produced this
+  generatedAt            DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, generatedAt])
+  @@map("burnout_predictions")
+}
+
+// ─── Alert ───────────────────────────────────────────────
+
+model Alert {
+  id              String        @id @default(cuid())
+  employeeId      String
+  alertType       String        // e.g. "RISK_THRESHOLD_CROSSED", "RAPID_SCORE_INCREASE"
+  severity        AlertSeverity
+  message         String
+  acknowledged    Boolean       @default(false)
+  acknowledgedById String?
+  acknowledgedAt  DateTime?
+  createdAt       DateTime      @default(now())
+
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  acknowledgedBy User?    @relation("AcknowledgedBy", fields: [acknowledgedById], references: [id])
+
+  @@index([employeeId, createdAt])
+  @@index([severity, acknowledged])
+  @@map("alerts")
+}
+
+// ─── IntegrationConnection ───────────────────────────────
+
+model IntegrationConnection {
+  id             String              @id @default(cuid())
+  organizationId String
+  provider       IntegrationProvider
+  accessToken    String?             // Encrypted
+  refreshToken   String?             // Encrypted
+  scopes         String[]            @default([])
+  isActive       Boolean             @default(true)
+  lastSyncAt     DateTime?
+  syncFrequency  Int?                // Minutes between syncs
+  config         Json?               // Provider-specific settings
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+  @@map("integration_connections")
+}
+
+// ─── ActionRecommendation ────────────────────────────────
+
+model ActionRecommendation {
+  id             String   @id @default(cuid())
+  employeeId     String
+  recommendation String   // The AI-generated suggestion text
+  category       String   // e.g. "WORKLOAD", "RECOGNITION", "FLEXIBILITY", "GROWTH"
+  priority       Int      @default(0) // Higher = more urgent
+  implemented    Boolean  @default(false)
+  implementedAt  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, implemented])
+  @@map("action_recommendations")
+}

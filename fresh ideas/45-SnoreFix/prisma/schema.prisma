@@ -1,0 +1,163 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum SnoreIntensity {
+  MILD
+  MODERATE
+  SEVERE
+  EXTREME
+}
+
+enum SolutionType {
+  POSITIONAL
+  DEVICE
+  LIFESTYLE
+  MEDICAL
+  EXERCISE
+}
+
+enum RecordingStatus {
+  RECORDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  avatar    String?
+  age       Int?
+  weight    Float?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recordings SleepRecording[]
+  solutions  UserSolution[]
+  progress   Progress[]
+
+  @@index([email])
+}
+
+model SleepRecording {
+  id            String         @id @default(cuid())
+  date          DateTime       @db.Date
+  bedtime       DateTime
+  wakeTime      DateTime
+  duration      Int            // total sleep duration in minutes
+  snoreEvents   Int            @default(0) // total number of snore events
+  avgIntensity  SnoreIntensity?
+  peakIntensity SnoreIntensity?
+  peakDecibels  Float?
+  avgDecibels   Float?
+  audioFile     String?        // path or URL to audio recording
+  audioSize     Int?           // file size in bytes
+  status        RecordingStatus @default(COMPLETED)
+  sleepQuality  Int?           // 1-10 scale
+  notes         String?        @db.Text
+  position      String?        // sleeping position
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  events SnoreEvent[]
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+  @@unique([userId, date])
+}
+
+model SnoreEvent {
+  id        String         @id @default(cuid())
+  timestamp DateTime       // exact time of the event
+  duration  Int            // duration in seconds
+  decibels  Float          // peak decibel level
+  intensity SnoreIntensity
+  audioClip String?        // optional short audio clip URL
+  createdAt DateTime       @default(now())
+
+  recordingId String
+  recording   SleepRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+
+  @@index([recordingId])
+  @@index([timestamp])
+  @@index([intensity])
+}
+
+model Solution {
+  id            String       @id @default(cuid())
+  name          String       @unique
+  type          SolutionType
+  description   String       @db.Text
+  instructions  String?      @db.Text
+  effectiveness Float?       // average effectiveness 0-100
+  imageUrl      String?
+  externalLink  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  users UserSolution[]
+
+  @@index([type])
+}
+
+model UserSolution {
+  id            String   @id @default(cuid())
+  effectiveness Float?   // user-reported effectiveness 0-100
+  startDate     DateTime @default(now())
+  endDate       DateTime?
+  active        Boolean  @default(true)
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  solutionId String
+  solution   Solution @relation(fields: [solutionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, solutionId])
+  @@index([userId])
+  @@index([active])
+}
+
+model Progress {
+  id                 String   @id @default(cuid())
+  weekStart          DateTime @db.Date
+  avgSnoreEvents     Float    @default(0)
+  avgDuration        Float    @default(0) // avg snore duration per night in minutes
+  avgIntensityScore  Float    @default(0) // numeric intensity score
+  avgSleepQuality    Float?
+  improvementPercent Float?   // compared to previous week
+  recordingCount     Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@index([weekStart])
+}

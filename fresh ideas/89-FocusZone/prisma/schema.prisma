@@ -1,0 +1,206 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum WorkspaceType {
+  CAFE
+  LIBRARY
+  COWORKING
+  PARK
+  HOTEL_LOBBY
+  BOOKSTORE
+  UNIVERSITY
+}
+
+enum NoiseLevel {
+  SILENT
+  QUIET
+  MODERATE
+  LIVELY
+  LOUD
+}
+
+enum WifiSpeed {
+  NONE
+  SLOW
+  MODERATE
+  FAST
+  VERY_FAST
+}
+
+enum PowerAccess {
+  NONE
+  LIMITED
+  GOOD
+  ABUNDANT
+}
+
+enum SeatingType {
+  INDIVIDUAL
+  SHARED_TABLE
+  BOOTH
+  COUCH
+  STANDING
+  OUTDOOR
+}
+
+enum MoodRating {
+  VERY_UNPRODUCTIVE
+  UNPRODUCTIVE
+  NEUTRAL
+  PRODUCTIVE
+  VERY_PRODUCTIVE
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  name         String
+  password     String
+  avatar       String?
+  city         String?
+  preferredNoise NoiseLevel?
+  preferredType  WorkspaceType?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  reviews      WorkspaceReview[]
+  checkIns     CheckIn[]
+  favorites    Favorite[]
+  noiseReports NoiseReport[]
+
+  @@index([email])
+  @@index([city])
+}
+
+model Workspace {
+  id            String            @id @default(cuid())
+  name          String
+  description   String?
+  address       String
+  city          String
+  state         String?
+  country       String            @default("US")
+  lat           Float
+  lng           Float
+  type          WorkspaceType
+  noiseLevel    NoiseLevel        @default(MODERATE)
+  wifi          WifiSpeed         @default(MODERATE)
+  wifiPassword  String?
+  power         PowerAccess       @default(GOOD)
+  hours         Json?
+  seating       SeatingType[]
+  capacity      Int?
+  hasFood       Boolean           @default(false)
+  hasCoffee     Boolean           @default(true)
+  hasParking    Boolean           @default(false)
+  petFriendly   Boolean           @default(false)
+  accessibility Boolean           @default(false)
+  priceRange    Int?
+  image         String?
+  photos        String[]
+  amenities     String[]
+  website       String?
+  phone         String?
+  rating        Float             @default(0)
+  totalReviews  Int               @default(0)
+  verified      Boolean           @default(false)
+  submittedBy   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  reviews       WorkspaceReview[]
+  checkIns      CheckIn[]
+  favorites     Favorite[]
+  noiseReports  NoiseReport[]
+
+  @@index([lat, lng])
+  @@index([city])
+  @@index([type])
+  @@index([noiseLevel])
+  @@index([rating])
+}
+
+model WorkspaceReview {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  reviewerId    String
+  reviewer      User      @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  rating        Int
+  noiseRating   Int
+  wifiRating    Int
+  comfortRating Int
+  powerRating   Int?
+  valueRating   Int?
+  comment       String?
+  pros          String[]
+  cons          String[]
+  visitDate     DateTime?
+  timeOfDay     String?
+  photos        String[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([workspaceId, reviewerId])
+  @@index([workspaceId])
+  @@index([reviewerId])
+  @@index([rating])
+}
+
+model CheckIn {
+  id          String     @id @default(cuid())
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime   @default(now())
+  duration    Int?
+  mood        MoodRating?
+  tasksCompleted Int?
+  noiseActual NoiseLevel?
+  notes       String?
+  createdAt   DateTime   @default(now())
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([date])
+}
+
+model Favorite {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+}
+
+model NoiseReport {
+  id          String     @id @default(cuid())
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level       NoiseLevel
+  decibels    Float?
+  source      String?
+  timeOfDay   String?
+  dayOfWeek   String?
+  date        DateTime   @default(now())
+  createdAt   DateTime   @default(now())
+
+  @@index([workspaceId])
+  @@index([date])
+}

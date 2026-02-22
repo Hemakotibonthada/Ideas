@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum Chronotype {
+  LION
+  BEAR
+  WOLF
+  DOLPHIN
+}
+
+enum NapQuality {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  FAILED
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  napSessions     NapSession[]
+  circadianProfile CircadianProfile?
+  napSchedules    NapSchedule[]
+  energyLogs      EnergyLog[]
+
+  @@index([email])
+}
+
+model NapSession {
+  id             String     @id @default(cuid())
+  date           DateTime   @db.Date
+  startTime      DateTime
+  duration       Int        // minutes
+  quality        NapQuality
+  alertnessBefore Int?      // 1-10 scale
+  alertnessAfter Int?       // 1-10 scale
+  environment    String?    // office, home, car, etc.
+  usedAlarm      Boolean    @default(true)
+  notes          String?
+  createdAt      DateTime   @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([date])
+  @@index([quality])
+  @@index([userId, date])
+}
+
+model CircadianProfile {
+  id        String     @id @default(cuid())
+  chronotype Chronotype
+  peakHours Json       // e.g. ["09:00-12:00", "15:00-17:00"]
+  dipHours  Json       // e.g. ["13:00-15:00"]
+  wakeTime  String?    // preferred wake time "HH:mm"
+  sleepTime String?    // preferred sleep time "HH:mm"
+  notes     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  @@index([chronotype])
+}
+
+model NapSchedule {
+  id          String   @id @default(cuid())
+  optimalTime String   // "HH:mm" format
+  duration    Int      // minutes
+  days        String[] // ["MON", "TUE", "WED", ...]
+  enabled     Boolean  @default(true)
+  reminder    Boolean  @default(true)
+  label       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([enabled])
+}
+
+model EnergyLog {
+  id        String   @id @default(cuid())
+  timestamp DateTime @default(now())
+  level     Int      // 1-10 scale
+  activity  String?  // what user was doing
+  caffeine  Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([userId, timestamp])
+  @@index([level])
+}

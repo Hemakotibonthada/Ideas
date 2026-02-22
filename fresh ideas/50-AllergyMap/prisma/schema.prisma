@@ -1,0 +1,209 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Allergen {
+  PEANUT
+  TREE_NUT
+  MILK
+  EGG
+  WHEAT
+  SOY
+  FISH
+  SHELLFISH
+  SESAME
+  GLUTEN
+}
+
+enum Severity {
+  MILD
+  MODERATE
+  SEVERE
+  ANAPHYLACTIC
+}
+
+enum VenueType {
+  RESTAURANT
+  CAFE
+  BAKERY
+  FAST_FOOD
+  BAR
+  GROCERY
+  FOOD_TRUCK
+  BUFFET
+}
+
+enum Role {
+  USER
+  VENUE_OWNER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  avatar    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  allergyProfile AllergyProfile?
+  reviews        VenueReview[]
+  favorites      FavoriteVenue[]
+
+  @@index([email])
+}
+
+model AllergyProfile {
+  id            String     @id @default(cuid())
+  allergens     Allergen[]
+  severity      Severity   @default(MODERATE)
+  customAllergens String[] // allergens not in the enum
+  medications   String?    // e.g., "EpiPen"
+  emergencyContact String?
+  emergencyPhone   String?
+  doctorName    String?
+  doctorPhone   String?
+  notes         String?    @db.Text
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([allergens])
+}
+
+model Venue {
+  id           String    @id @default(cuid())
+  name         String
+  address      String
+  city         String
+  state        String?
+  zipCode      String?
+  country      String    @default("US")
+  lat          Float
+  lng          Float
+  type         VenueType
+  phone        String?
+  website      String?
+  cuisine      String?
+  priceRange   Int?      // 1-4, $ to $$$$
+  safetyRating Float?    // 0-5 average allergy safety rating
+  reviewCount  Int       @default(0)
+  imageUrl     String?
+  allergyMenu  Boolean   @default(false) // has dedicated allergy menu
+  staffTrained Boolean   @default(false) // staff trained on allergies
+  verified     Boolean   @default(false)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  reviews   VenueReview[]
+  menuItems MenuItem[]
+  favorites FavoriteVenue[]
+  allergenInfo VenueAllergenInfo[]
+
+  @@index([lat, lng])
+  @@index([type])
+  @@index([city])
+  @@index([safetyRating])
+  @@index([city, type])
+}
+
+model VenueAllergenInfo {
+  id           String   @id @default(cuid())
+  allergen     Allergen
+  safeOptions  Int      @default(0) // number of safe menu items
+  crossContamRisk Boolean @default(false)
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, allergen])
+  @@index([venueId])
+  @@index([allergen])
+}
+
+model VenueReview {
+  id            String     @id @default(cuid())
+  rating        Int        // 1-5 overall rating
+  safetyRating  Int        // 1-5 allergy safety rating
+  allergensSafe Allergen[] // which allergens were safely handled
+  allergensUnsafe Allergen[] // which allergens were NOT safely handled
+  comment       String?    @db.Text
+  staffKnowledge Int?      // 1-5 staff allergy knowledge
+  menuClarity   Int?       // 1-5 how clear allergen info is on menu
+  wouldReturn   Boolean    @default(true)
+  visitDate     DateTime?
+  imageUrls     String[]
+  helpful       Int        @default(0) // helpful votes
+  verified      Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  venueId    String
+  venue      Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User  @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@index([reviewerId])
+  @@index([rating])
+  @@index([venueId, rating])
+  @@unique([venueId, reviewerId]) // one review per user per venue
+}
+
+model MenuItem {
+  id          String     @id @default(cuid())
+  name        String
+  description String?    @db.Text
+  category    String?    // e.g., "appetizer", "main", "dessert"
+  price       Float?
+  allergens   Allergen[] // allergens present in this item
+  safeFor     Allergen[] // explicitly safe for these allergens
+  modifiable  Boolean    @default(false) // can be modified to remove allergens
+  modNotes    String?    @db.Text // modification instructions
+  imageUrl    String?
+  available   Boolean    @default(true)
+  verified    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  venueId String
+  venue   Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@index([allergens])
+  @@index([venueId, category])
+  @@index([available])
+}
+
+model FavoriteVenue {
+  id        String   @id @default(cuid())
+  alias     String?  // user-given nickname
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  userId  String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId String
+  venue   Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, venueId])
+  @@index([userId])
+}

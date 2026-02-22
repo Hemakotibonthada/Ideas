@@ -1,0 +1,130 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum ViolationSeverity {
+  CRITICAL
+  MAJOR
+  MINOR
+  OBSERVATION
+}
+
+enum InspectionGrade {
+  A
+  B
+  C
+  D
+  F
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  role      String   @default("USER") // USER, INSPECTOR, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports UserReport[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Restaurant {
+  id             String    @id @default(cuid())
+  name           String
+  address        String
+  phone          String?
+  cuisine        String?
+  lat            Float?
+  lng            Float?
+  lastInspection DateTime?
+  currentGrade   InspectionGrade?
+  averageScore   Float?
+  imageUrl       String?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  inspections Inspection[]
+  reports     UserReport[]
+
+  @@index([name])
+  @@index([cuisine])
+  @@index([currentGrade])
+  @@index([lat, lng])
+  @@index([active])
+}
+
+model Inspection {
+  id        String          @id @default(cuid())
+  date      DateTime
+  score     Int             // 0-100
+  grade     InspectionGrade
+  inspector String
+  summary   String?
+  followUp  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+
+  violations Violation[]
+
+  @@index([restaurantId])
+  @@index([date])
+  @@index([grade])
+  @@index([restaurantId, date])
+}
+
+model Violation {
+  id          String            @id @default(cuid())
+  code        String
+  description String
+  severity    ViolationSeverity
+  corrected   Boolean           @default(false)
+  correctedAt DateTime?
+  notes       String?
+  createdAt   DateTime          @default(now())
+
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  inspectionId String
+
+  @@index([inspectionId])
+  @@index([severity])
+  @@index([code])
+  @@index([corrected])
+}
+
+model UserReport {
+  id        String   @id @default(cuid())
+  issue     String
+  details   String?
+  date      DateTime @default(now())
+  resolved  Boolean  @default(false)
+  resolvedAt DateTime?
+  adminNotes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurantId String
+  reporter     User       @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId   String
+
+  @@index([restaurantId])
+  @@index([reporterId])
+  @@index([resolved])
+  @@index([date])
+}

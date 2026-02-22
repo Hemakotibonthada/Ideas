@@ -1,0 +1,170 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum HeatingType {
+  GAS
+  ELECTRIC
+  HEAT_PUMP
+  SOLAR
+  GEOTHERMAL
+  OIL
+}
+
+enum ImpactLevel {
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
+}
+
+enum InsulationType {
+  NONE
+  BASIC
+  STANDARD
+  HIGH_PERFORMANCE
+  SPRAY_FOAM
+}
+
+enum WindowType {
+  SINGLE_PANE
+  DOUBLE_PANE
+  TRIPLE_PANE
+  LOW_E
+}
+
+enum RecommendationCategory {
+  INSULATION
+  HEATING
+  COOLING
+  LIGHTING
+  APPLIANCES
+  WATER
+  SOLAR
+  WASTE
+  LANDSCAPING
+  WINDOWS
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  zipCode   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  homes     Home[]
+
+  @@index([email])
+}
+
+model Home {
+  id            String         @id @default(cuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String         @default("My Home")
+  address       String
+  city          String?
+  state         String?
+  zipCode       String?
+  size          Int
+  stories       Int            @default(1)
+  bedrooms      Int?
+  bathrooms     Int?
+  yearBuilt     Int
+  heatingType   HeatingType
+  coolingType   String?
+  insulation    InsulationType @default(STANDARD)
+  windows       WindowType     @default(DOUBLE_PANE)
+  roofType      String?
+  hasSolar      Boolean        @default(false)
+  hasPool       Boolean        @default(false)
+  monthlyEnergy Float?
+  monthlyWater  Float?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  assessments   Assessment[]
+  progress      Progress[]
+
+  @@index([userId])
+  @@index([zipCode])
+}
+
+model Assessment {
+  id              String           @id @default(cuid())
+  homeId          String
+  home            Home             @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  date            DateTime         @default(now())
+  overallScore    Float
+  energyScore     Float
+  waterScore      Float
+  wasteScore      Float
+  carbonFootprint Float?
+  energyUsage     Float?
+  waterUsage      Float?
+  details         Json?
+  summary         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  recommendations Recommendation[]
+
+  @@index([homeId])
+  @@index([date])
+  @@index([overallScore])
+}
+
+model Recommendation {
+  id           String                 @id @default(cuid())
+  assessmentId String
+  assessment   Assessment             @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  category     RecommendationCategory
+  title        String
+  description  String
+  cost         Float
+  costMax      Float?
+  savings      Float
+  savingsUnit  String                 @default("year")
+  impact       ImpactLevel
+  paybackYears Float?
+  difficulty   Int                    @default(3)
+  diyFriendly  Boolean                @default(false)
+  priority     Int                    @default(0)
+  resources    String[]
+  createdAt    DateTime               @default(now())
+  progress     Progress[]
+
+  @@index([assessmentId])
+  @@index([category])
+  @@index([impact])
+}
+
+model Progress {
+  id               String         @id @default(cuid())
+  homeId           String
+  home             Home           @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  recommendationId String
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  completed        Boolean        @default(false)
+  date             DateTime?
+  actualCost       Float?
+  notes            String?
+  beforePhoto      String?
+  afterPhoto       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([homeId, recommendationId])
+  @@index([homeId])
+  @@index([completed])
+}

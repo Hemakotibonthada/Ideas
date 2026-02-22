@@ -1,0 +1,164 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Surface {
+  PAVED
+  GRAVEL
+  DIRT
+  COBBLESTONE
+}
+
+enum BikelaneType {
+  DEDICATED
+  SHARED
+  NONE
+  PROTECTED
+}
+
+enum ReportType {
+  POTHOLE
+  CONSTRUCTION
+  HAZARD
+  CLOSURE
+  ACCIDENT
+  THEFT
+  PARKING
+  OTHER
+}
+
+enum Difficulty {
+  EASY
+  MODERATE
+  HARD
+  EXPERT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  city      String?
+  state     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  routes         Route[]
+  reports        Report[]
+  favoriteRoutes FavoriteRoute[]
+
+  @@index([email])
+  @@index([city, state])
+}
+
+model Route {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startLat    Float
+  startLng    Float
+  endLat      Float
+  endLng      Float
+  distance    Float
+  elevation   Float      @default(0)
+  safetyScore Float      @default(0)
+  difficulty  Difficulty @default(MODERATE)
+  duration    Int?
+  isPublic    Boolean    @default(true)
+  polyline    String?
+  rides       Int        @default(0)
+  imageUrl    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  segments  RouteSegment[]
+  reports   Report[]
+  favorites FavoriteRoute[]
+
+  @@index([userId])
+  @@index([startLat, startLng])
+  @@index([endLat, endLng])
+  @@index([distance])
+  @@index([safetyScore])
+  @@index([difficulty])
+  @@index([isPublic])
+  @@index([rides])
+}
+
+model RouteSegment {
+  id          String       @id @default(cuid())
+  routeId     String
+  route       Route        @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  orderIndex  Int
+  startLat    Float
+  startLng    Float
+  endLat      Float
+  endLng      Float
+  distance    Float
+  surface     Surface      @default(PAVED)
+  bikelane    BikelaneType @default(NONE)
+  traffic     Int          @default(0)
+  speedLimit  Int?
+  lighting    Boolean      @default(true)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([routeId])
+  @@index([surface])
+  @@index([bikelane])
+  @@index([routeId, orderIndex])
+}
+
+model Report {
+  id          String     @id @default(cuid())
+  routeId     String?
+  route       Route?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        ReportType
+  title       String?
+  description String?
+  lat         Float
+  lng         Float
+  imageUrl    String?
+  severity    Int        @default(1)
+  resolved    Boolean    @default(false)
+  resolvedAt  DateTime?
+  upvotes     Int        @default(0)
+  expiresAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([routeId])
+  @@index([userId])
+  @@index([type])
+  @@index([lat, lng])
+  @@index([resolved])
+  @@index([createdAt])
+  @@index([type, resolved])
+}
+
+model FavoriteRoute {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routeId   String
+  route     Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  notes     String?
+  rideCount Int      @default(0)
+  lastRode  DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, routeId])
+  @@index([userId])
+  @@index([routeId])
+}

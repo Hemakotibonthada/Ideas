@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String?
+  email          String   @unique
+  hashedPassword String?
+  role           String   @default("STAFF")
+  createdAt      DateTime @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model Organization {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  currency   String   @default("USD")
+  lowStockThreshold Int @default(10)
+  createdAt  DateTime @default(now())
+  users      User[]
+  warehouses Warehouse[]
+  products   Product[]
+  categories Category[]
+  suppliers  Supplier[]
+  purchaseOrders PurchaseOrder[]
+}
+
+// ==================== INVENTORY CORE ====================
+
+model Warehouse {
+  id             String   @id @default(cuid())
+  name           String
+  code           String
+  address        String?
+  city           String?
+  country        String?
+  isDefault      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  zones          Zone[]
+  stockLevels    StockLevel[]
+  stockMovements StockMovement[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+}
+
+model Zone {
+  id          String    @id @default(cuid())
+  name        String    // e.g., "Aisle A", "Shelf B3"
+  type        String    @default("STORAGE") // STORAGE, RECEIVING, SHIPPING, RETURNS
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  warehouseId String
+  locations   Location[]
+
+  @@index([warehouseId])
+}
+
+model Location {
+  id          String  @id @default(cuid())
+  code        String  // e.g., "A-01-03"
+  zone        Zone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  zoneId      String
+  stockLevels StockLevel[]
+
+  @@index([zoneId])
+}
+
+model Category {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  parentId       String?
+  parent         Category? @relation("SubCategories", fields: [parentId], references: [id])
+  children       Category[] @relation("SubCategories")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  products       Product[]
+
+  @@index([organizationId])
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  sku            String
+  barcode        String?
+  description    String?  @db.Text
+  unitPrice      Float    @default(0)
+  costPrice      Float    @default(0)
+  weight         Float?
+  dimensions     String?  // "LxWxH"
+  unit           String   @default("unit") // unit, kg, liter, box, etc.
+  minStockLevel  Int      @default(0)
+  maxStockLevel  Int?
+  reorderPoint   Int      @default(10)
+  reorderQty     Int      @default(50)
+  leadTimeDays   Int      @default(7)
+  image          String?
+  isActive       Boolean  @default(true)
+  isPerishable   Boolean  @default(false)
+  expiryAlert    Int?     // days before expiry to alert
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  category       Category? @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  supplier       Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId     String?
+  stockLevels    StockLevel[]
+  stockMovements StockMovement[]
+  purchaseItems  PurchaseOrderItem[]
+  variants       ProductVariant[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId])
+  @@index([sku])
+  @@index([barcode])
+}
+
+model ProductVariant {
+  id         String @id @default(cuid())
+  name       String // e.g., "Red - Large"
+  sku        String
+  attributes Json   // { "color": "Red", "size": "Large" }
+  costPrice  Float  @default(0)
+  unitPrice  Float  @default(0)
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId  String
+
+  @@index([productId])
+}
+
+model StockLevel {
+  id          String    @id @default(cuid())
+  quantity    Int       @default(0)
+  reserved    Int       @default(0) // reserved for orders
+  available   Int       @default(0) // quantity - reserved
+  batchNumber String?
+  expiryDate  DateTime?
+  lastCounted DateTime?
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  warehouseId String
+  location    Location? @relation(fields: [locationId], references: [id])
+  locationId  String?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, warehouseId, batchNumber])
+  @@index([productId])
+  @@index([warehouseId])
+}
+
+model StockMovement {
+  id            String       @id @default(cuid())
+  type          MovementType
+  quantity      Int
+  reference     String?
+  notes         String?
+  batchNumber   String?
+  costPerUnit   Float?
+  product       Product      @relation(fields: [productId], references: [id])
+  productId     String
+  warehouse     Warehouse    @relation(fields: [warehouseId], references: [id])
+  warehouseId   String
+  user          User         @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime     @default(now())
+
+  @@index([productId])
+  @@index([warehouseId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum MovementType {
+  RECEIVED
+  SHIPPED
+  RETURNED
+  ADJUSTED
+  TRANSFERRED
+  DAMAGED
+  EXPIRED
+  COUNTED
+}
+
+// ==================== PURCHASING ====================
+
+model Supplier {
+  id             String   @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  city           String?
+  country        String?
+  paymentTerms   Int      @default(30)
+  rating         Int?     // 1-5
+  isActive       Boolean  @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([organizationId])
+}
+
+model PurchaseOrder {
+  id             String     @id @default(cuid())
+  orderNumber    String
+  status         POStatus   @default(DRAFT)
+  orderDate      DateTime   @default(now())
+  expectedDate   DateTime?
+  receivedDate   DateTime?
+  subtotal       Float      @default(0)
+  taxAmount      Float      @default(0)
+  shippingCost   Float      @default(0)
+  total          Float      @default(0)
+  notes          String?
+  supplier       Supplier   @relation(fields: [supplierId], references: [id])
+  supplierId     String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdBy      User       @relation(fields: [createdById], references: [id])
+  createdById    String
+  items          PurchaseOrderItem[]
+  createdAt      DateTime   @default(now())
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+enum POStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  quantity        Int
+  unitCost        Float
+  receivedQty     Int           @default(0)
+  total           Float
+  product         Product       @relation(fields: [productId], references: [id])
+  productId       String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  purchaseOrderId String
+
+  @@index([purchaseOrderId])
+}
+
+model StockAlert {
+  id          String   @id @default(cuid())
+  type        String   // LOW_STOCK, OUT_OF_STOCK, EXPIRING, OVERSTOCK
+  message     String
+  productId   String
+  warehouseId String?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([read])
+}

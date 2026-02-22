@@ -1,0 +1,113 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum FeedbackCategory {
+  PACE
+  VOLUME
+  FILLER_WORDS
+  EYE_CONTACT
+  BODY_LANGUAGE
+  CLARITY
+  ENGAGEMENT
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  speeches  Speech[]
+  progress  Progress[]
+
+  @@index([email])
+}
+
+model Speech {
+  id        String   @id @default(cuid())
+  title     String
+  text      String
+  duration  Int?     // target duration in seconds
+  occasion  String?  // wedding, conference, class, pitch, etc.
+  tags      String[]
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  sessions PracticeSession[]
+  progress Progress[]
+
+  @@index([userId])
+  @@index([occasion])
+}
+
+model PracticeSession {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  duration  Int      // actual duration in seconds
+  recording String?  // URL to recording file
+  notes     String?
+  createdAt DateTime @default(now())
+
+  speech   Speech @relation(fields: [speechId], references: [id], onDelete: Cascade)
+  speechId String
+
+  feedback Feedback[]
+
+  @@index([speechId])
+  @@index([date])
+  @@index([speechId, date])
+}
+
+model Feedback {
+  id         String           @id @default(cuid())
+  category   FeedbackCategory
+  score      Int              // 1-10 scale
+  suggestion String?
+  timestamp  DateTime         @default(now())
+  automated  Boolean          @default(false) // AI-generated vs manual
+  createdAt  DateTime         @default(now())
+
+  session   PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+
+  @@index([sessionId])
+  @@index([category])
+  @@index([sessionId, category])
+}
+
+model Progress {
+  id         String   @id @default(cuid())
+  fluency    Float    // 0-100 score
+  pace       Float    // words per minute
+  fillers    Int      // count of filler words
+  confidence Float    // 0-100 score
+  recordedAt DateTime @default(now())
+  notes      String?
+
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  speech   Speech @relation(fields: [speechId], references: [id], onDelete: Cascade)
+  speechId String
+
+  @@index([userId])
+  @@index([speechId])
+  @@index([userId, speechId])
+  @@index([recordedAt])
+}

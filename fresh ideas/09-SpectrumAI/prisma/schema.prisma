@@ -1,0 +1,200 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum WCAGLevel {
+  A
+  AA
+  AAA
+}
+
+enum IssueSeverity {
+  CRITICAL
+  MAJOR
+  MINOR
+  COSMETIC
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  FIXED
+  IGNORED
+  WONT_FIX
+}
+
+enum FixType {
+  ALT_TEXT
+  ARIA_LABEL
+  COLOR_CONTRAST
+  FOCUS_ORDER
+  KEYBOARD_NAV
+  CAPTION
+  HEADING_STRUCTURE
+}
+
+// ── Models ────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users    User[]
+  websites Website[]
+  apiUsage ApiUsage[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String       @unique
+  name           String
+  role           Role         @default(MEMBER)
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Website {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domain         String
+  crawlSchedule  String?
+  lastCrawlAt    DateTime?
+  wcagLevel      WCAGLevel    @default(AA)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  pages        Page[]
+  auditReports AuditReport[]
+}
+
+model Page {
+  id                String   @id @default(cuid())
+  websiteId         String
+  website           Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  url               String
+  lastScannedAt     DateTime?
+  accessibilityScore Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  issues              Issue[]
+  altTexts            AltText[]
+  captions            Caption[]
+  signLanguageAvatars SignLanguageAvatar[]
+}
+
+model Issue {
+  id             String        @id @default(cuid())
+  pageId         String
+  page           Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  wcagCriterion  String
+  severity       IssueSeverity
+  elementSelector String
+  currentState   String
+  suggestedFix   String?
+  autoFixable    Boolean       @default(false)
+  status         IssueStatus   @default(OPEN)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  autoFix AutoFix?
+}
+
+model AutoFix {
+  id            String   @id @default(cuid())
+  issueId       String   @unique
+  issue         Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  fixType       FixType
+  generatedCode String
+  appliedAt     DateTime?
+  verified      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AltText {
+  id            String  @id @default(cuid())
+  pageId        String
+  page          Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  imageUrl      String
+  generatedAlt  String
+  confidence    Float
+  humanReviewed Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Caption {
+  id         String   @id @default(cuid())
+  pageId     String
+  page       Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  mediaUrl   String
+  language   String
+  srtContent String
+  format     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model SignLanguageAvatar {
+  id             String   @id @default(cuid())
+  pageId         String
+  page           Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  mediaUrl       String
+  avatarVideoUrl String
+  language       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditReport {
+  id             String   @id @default(cuid())
+  websiteId      String
+  website        Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  period         String
+  totalIssues    Int
+  criticalIssues Int
+  score          Float
+  pdfUrl         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ApiUsage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  endpoint       String
+  callCount      Int          @default(0)
+  period         String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}

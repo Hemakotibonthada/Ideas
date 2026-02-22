@@ -1,0 +1,234 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum LLMProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE
+  META
+  MISTRAL
+  COHERE
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  TIMEOUT
+  CANCELLED
+}
+
+enum ABTestStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+// ─── Organization ────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  projects   Project[]
+  executions Execution[]
+
+  @@map("organizations")
+}
+
+// ─── User ────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  avatarUrl      String?
+  role           Role     @default(MEMBER)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  promptVersions PromptVersion[]
+  abTests        ABTest[]
+
+  @@map("users")
+}
+
+// ─── Project ─────────────────────────────────────────────
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  prompts      Prompt[]
+  costBudgets  CostBudget[]
+
+  @@unique([organizationId, name])
+  @@map("projects")
+}
+
+// ─── Prompt ──────────────────────────────────────────────
+
+model Prompt {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  projectId   String
+  variables   Json?    // Array of variable definitions: [{name, type, default}]
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions PromptVersion[]
+
+  @@unique([projectId, name])
+  @@map("prompts")
+}
+
+// ─── PromptVersion ───────────────────────────────────────
+
+model PromptVersion {
+  id            String   @id @default(cuid())
+  promptId      String
+  version       Int
+  content       String   // The full prompt template text
+  diff          String?  // Diff from previous version
+  commitMessage String?
+  createdById   String
+  isPublished   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  prompt     Prompt          @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  createdBy  User            @relation(fields: [createdById], references: [id])
+  executions Execution[]
+  variantA   ABTestVariant[] @relation("VariantA")
+  variantB   ABTestVariant[] @relation("VariantB")
+
+  @@unique([promptId, version])
+  @@map("prompt_versions")
+}
+
+// ─── ABTest ──────────────────────────────────────────────
+
+model ABTest {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  status      ABTestStatus @default(DRAFT)
+  createdById String
+  startedAt   DateTime?
+  endedAt     DateTime?
+  winnerId    String?      // ID of winning variant
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  createdBy User            @relation(fields: [createdById], references: [id])
+  variants  ABTestVariant[]
+
+  @@map("ab_tests")
+}
+
+// ─── ABTestVariant ───────────────────────────────────────
+
+model ABTestVariant {
+  id              String @id @default(cuid())
+  abTestId        String
+  name            String // e.g. "Control", "Variant A"
+  promptVersionId String
+  trafficSplit    Float  // 0.0 – 1.0, must sum to 1.0 across test variants
+  totalRequests   Int    @default(0)
+  avgLatencyMs    Float? // Tracked aggregate
+  avgCost         Float? // Tracked aggregate
+  avgScore        Float? // Custom quality score
+
+  abTest        ABTest        @relation(fields: [abTestId], references: [id], onDelete: Cascade)
+  promptVersion PromptVersion @relation("VariantA", fields: [promptVersionId], references: [id])
+
+  // Unused relation kept for future bidirectional reference
+  @@map("ab_test_variants")
+}
+
+// ─── Execution ───────────────────────────────────────────
+
+model Execution {
+  id              String          @id @default(cuid())
+  organizationId  String
+  promptVersionId String
+  provider        LLMProvider
+  model           String          // e.g. "gpt-4o", "claude-3-opus"
+  status          ExecutionStatus @default(PENDING)
+  inputTokens     Int?
+  outputTokens    Int?
+  totalTokens     Int?
+  costUsd         Float?          // Computed from token pricing
+  latencyMs       Int?
+  inputPayload    Json?           // The rendered prompt sent to the LLM
+  outputPayload   Json?           // The response received
+  errorMessage    String?
+  metadata        Json?           // Arbitrary k/v (user id, session, etc.)
+  createdAt       DateTime        @default(now())
+
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  promptVersion PromptVersion @relation(fields: [promptVersionId], references: [id])
+
+  @@index([promptVersionId, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("executions")
+}
+
+// ─── CostBudget ──────────────────────────────────────────
+
+model CostBudget {
+  id           String   @id @default(cuid())
+  projectId    String
+  periodType   String   // "DAILY" | "MONTHLY"
+  limitUsd     Float
+  currentSpend Float    @default(0)
+  alertPercent Float    @default(80) // Alert when spend reaches this % of limit
+  isActive     Boolean  @default(true)
+  periodStart  DateTime
+  periodEnd    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("cost_budgets")
+}

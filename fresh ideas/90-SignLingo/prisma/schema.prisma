@@ -1,0 +1,212 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum SignLanguage {
+  ASL
+  BSL
+  LSF
+  DGS
+  JSL
+  AUSLAN
+}
+
+enum LessonCategory {
+  ALPHABET
+  NUMBERS
+  GREETINGS
+  EMOTIONS
+  FOOD
+  FAMILY
+  COLORS
+  ANIMALS
+  EMERGENCY
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  ELEMENTARY
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum AchievementType {
+  STREAK
+  MASTERY
+  SPEED
+  COMPLETION
+  SOCIAL
+  MILESTONE
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String
+  password      String
+  avatar        String?
+  preferredLang SignLanguage  @default(ASL)
+  level         DifficultyLevel @default(BEGINNER)
+  xp            Int           @default(0)
+  streak        Int           @default(0)
+  longestStreak Int           @default(0)
+  lastPractice  DateTime?
+  dailyGoal     Int           @default(10)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  practices     Practice[]
+  progress      Progress[]
+  achievements  UserAchievement[]
+
+  @@index([email])
+  @@index([preferredLang])
+  @@index([xp])
+}
+
+model Lesson {
+  id          String          @id @default(cuid())
+  title       String
+  language    SignLanguage
+  level       DifficultyLevel
+  category    LessonCategory
+  videoUrl    String?
+  thumbnailUrl String?
+  description String
+  objectives  String[]
+  duration    Int?
+  order       Int             @default(0)
+  xpReward    Int             @default(10)
+  isPublished Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  signs       LessonSign[]
+  progress    Progress[]
+
+  @@index([language])
+  @@index([level])
+  @@index([category])
+  @@index([order])
+}
+
+model Sign {
+  id          String          @id @default(cuid())
+  name        String
+  language    SignLanguage
+  gesture     String
+  description String?
+  image       String?
+  video       String?
+  thumbnail   String?
+  difficulty  DifficultyLevel @default(BEGINNER)
+  category    LessonCategory?
+  synonyms    String[]
+  tips        String?
+  commonErrors String[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  practices   Practice[]
+  lessonSigns LessonSign[]
+
+  @@unique([name, language])
+  @@index([language])
+  @@index([difficulty])
+  @@index([category])
+}
+
+model LessonSign {
+  id       String @id @default(cuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  signId   String
+  sign     Sign   @relation(fields: [signId], references: [id], onDelete: Cascade)
+  order    Int    @default(0)
+
+  @@unique([lessonId, signId])
+  @@index([lessonId])
+}
+
+model Practice {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signId        String
+  sign          Sign     @relation(fields: [signId], references: [id], onDelete: Cascade)
+  attempts      Int      @default(0)
+  correct       Int      @default(0)
+  accuracy      Float?
+  averageTime   Float?
+  lastPracticed DateTime @default(now())
+  mastered      Boolean  @default(false)
+  masteredAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, signId])
+  @@index([userId])
+  @@index([signId])
+  @@index([lastPracticed])
+  @@index([mastered])
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed   Boolean  @default(false)
+  score       Float?
+  bestScore   Float?
+  date        DateTime @default(now())
+  timeSpent   Int?
+  attempts    Int      @default(1)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([completed])
+}
+
+model Achievement {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  description String
+  type        AchievementType
+  icon        String?
+  badge       String?
+  requirement Json
+  xpReward    Int             @default(0)
+  rarity      String?
+  createdAt   DateTime        @default(now())
+  users       UserAchievement[]
+
+  @@index([type])
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  earnedAt      DateTime    @default(now())
+  progress      Float       @default(0)
+  completed     Boolean     @default(false)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([earnedAt])
+}

@@ -1,0 +1,154 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TransactionCategory {
+  HOUSING
+  FOOD
+  TRANSPORT
+  ENTERTAINMENT
+  SHOPPING
+  HEALTH
+  EDUCATION
+  UTILITIES
+  SUBSCRIPTIONS
+  SAVINGS
+  INCOME
+  OTHER
+}
+
+enum InsightType {
+  SUBSCRIPTION_UNUSED
+  PRICE_INCREASE
+  DUPLICATE_CHARGE
+  SPENDING_SPIKE
+  SAVINGS_OPPORTUNITY
+  BETTER_ALTERNATIVE
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  name          String
+  currency      String           @default("USD")
+  monthlyIncome Float?
+  financialGoal String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  bankConnections BankConnection[]
+  subscriptions Subscription[]
+  savingsGoals  SavingsGoal[]
+  budgets       Budget[]
+  insights      Insight[]
+  monthlyReports MonthlyReport[]
+}
+
+model BankConnection {
+  id           String        @id @default(cuid())
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  institution  String
+  accountId    String
+  accountType  String
+  balance      Float         @default(0)
+  lastSynced   DateTime      @default(now())
+  transactions Transaction[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id               String              @id @default(cuid())
+  bankConnection   BankConnection      @relation(fields: [bankConnectionId], references: [id], onDelete: Cascade)
+  bankConnectionId String
+  amount           Float
+  category         TransactionCategory @default(OTHER)
+  merchant         String?
+  date             DateTime
+  description      String?
+  isRecurring      Boolean             @default(false)
+  flagged          Boolean             @default(false)
+
+  @@index([bankConnectionId])
+  @@index([category])
+  @@index([date])
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  name              String
+  amount            Float
+  frequency         String
+  nextBillingDate   DateTime?
+  category          String?
+  cancellable       Boolean  @default(true)
+  lastCharged       DateTime?
+  savingsIfCancelled Float?
+
+  @@index([userId])
+}
+
+model SavingsGoal {
+  id               String   @id @default(cuid())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  name             String
+  targetAmount     Float
+  currentAmount    Float    @default(0)
+  deadline         DateTime?
+  autoSaveAmount   Float?
+  autoSaveFrequency String?
+
+  @@index([userId])
+}
+
+model Budget {
+  id           String              @id @default(cuid())
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  category     TransactionCategory
+  monthlyLimit Float
+  currentSpend Float               @default(0)
+  period       String
+
+  @@index([userId])
+}
+
+model Insight {
+  id              String      @id @default(cuid())
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  type            InsightType
+  title           String
+  description     String
+  potentialSavings Float?
+  actionUrl       String?
+  dismissed       Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+
+  @@index([userId])
+  @@index([type])
+}
+
+model MonthlyReport {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  month         Int
+  year          Int
+  totalIncome   Float    @default(0)
+  totalExpenses Float    @default(0)
+  totalSaved    Float    @default(0)
+  topCategories Json
+  insights      Json
+
+  @@unique([userId, month, year])
+  @@index([userId])
+}

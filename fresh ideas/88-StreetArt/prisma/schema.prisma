@@ -1,0 +1,213 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum ArtType {
+  MURAL
+  GRAFFITI
+  STENCIL
+  MOSAIC
+  SCULPTURE
+  INSTALLATION
+  WHEATPASTE
+  YARN_BOMB
+}
+
+enum ArtCondition {
+  PRISTINE
+  GOOD
+  FADED
+  DAMAGED
+  PARTIALLY_DESTROYED
+  DESTROYED
+  RESTORED
+}
+
+enum TourDifficulty {
+  EASY
+  MODERATE
+  CHALLENGING
+}
+
+enum ReportReason {
+  VANDALIZED
+  REMOVED
+  INCORRECT_LOCATION
+  OFFENSIVE
+  DUPLICATE
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String
+  password     String
+  avatar       String?
+  bio          String?
+  isArtist     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  photos       Photo[]
+  tours        Tour[]
+  reviews      Review[]
+  favorites    Favorite[]
+  artistProfile ArtistProfile?
+
+  @@index([email])
+}
+
+model Artwork {
+  id           String       @id @default(cuid())
+  title        String
+  artistId     String?
+  artist       ArtistProfile? @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  lat          Float
+  lng          Float
+  address      String?
+  city         String?
+  country      String?
+  type         ArtType
+  image        String
+  thumbnail    String?
+  description  String?
+  dateCreated  DateTime?
+  dateAdded    DateTime     @default(now())
+  condition    ArtCondition @default(GOOD)
+  medium       String?
+  dimensions   String?
+  tags         String[]
+  verified     Boolean      @default(false)
+  submittedBy  String?
+  views        Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  photos       Photo[]
+  reviews      Review[]
+  favorites    Favorite[]
+  tourArtworks TourArtwork[]
+
+  @@index([lat, lng])
+  @@index([type])
+  @@index([city])
+  @@index([condition])
+}
+
+model ArtistProfile {
+  id          String    @id @default(cuid())
+  userId      String?   @unique
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name        String
+  bio         String?
+  website     String?
+  instagram   String?
+  twitter     String?
+  socialMedia Json?
+  country     String?
+  city        String?
+  style       String[]
+  active      Boolean   @default(true)
+  verified    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  artworks    Artwork[]
+
+  @@index([name])
+  @@index([city])
+}
+
+model Photo {
+  id             String   @id @default(cuid())
+  artworkId      String
+  artwork        Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  photographerId String
+  photographer   User     @relation(fields: [photographerId], references: [id], onDelete: Cascade)
+  image          String
+  thumbnail      String?
+  caption        String?
+  date           DateTime @default(now())
+  likes          Int      @default(0)
+  isPrimary      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([artworkId])
+  @@index([photographerId])
+  @@index([likes])
+}
+
+model Tour {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  creatorId   String
+  creator     User          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  distance    Float
+  duration    Int
+  difficulty  TourDifficulty @default(EASY)
+  city        String?
+  image       String?
+  isPublic    Boolean       @default(true)
+  featured    Boolean       @default(false)
+  rating      Float?
+  totalRatings Int          @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  artworks    TourArtwork[]
+  reviews     Review[]
+
+  @@index([creatorId])
+  @@index([city])
+  @@index([featured])
+}
+
+model TourArtwork {
+  id        String  @id @default(cuid())
+  tourId    String
+  tour      Tour    @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  artworkId String
+  artwork   Artwork @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  order     Int
+  notes     String?
+
+  @@unique([tourId, artworkId])
+  @@index([tourId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artworkId  String?
+  artwork    Artwork? @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  tourId     String?
+  tour       Tour?    @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?
+  photos     String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([artworkId])
+  @@index([tourId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artworkId String
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, artworkId])
+  @@index([userId])
+}

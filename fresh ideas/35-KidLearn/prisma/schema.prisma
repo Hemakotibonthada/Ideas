@@ -1,0 +1,170 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum LearningStyle {
+  VISUAL
+  AUDITORY
+  KINESTHETIC
+  READING_WRITING
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  CHALLENGE
+}
+
+enum AgeGroup {
+  PRE_K
+  K_2
+  GRADE_3_5
+  GRADE_6_8
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model Parent {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  children  Child[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Child {
+  id            String        @id @default(cuid())
+  parentId      String
+  parent        Parent        @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  name          String
+  dateOfBirth   DateTime
+  grade         String
+  avatarUrl     String?
+  totalXP       Int           @default(0)
+  currentLevel  Int           @default(1)
+  learningStyle LearningStyle
+  progress      LessonProgress[]
+  quizAttempts  QuizAttempt[]
+  learningPaths LearningPath[]
+  rewards       Reward[]
+  reports       ParentReport[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Subject {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  icon    String
+  color   String
+  ageMin  Int
+  ageMax  Int
+  lessons Lesson[]
+  learningPaths LearningPath[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lesson {
+  id            String      @id @default(cuid())
+  subjectId     String
+  subject       Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title         String
+  description   String
+  content       Json
+  difficulty    Difficulty
+  ageGroup      AgeGroup
+  estimatedMins Int
+  xpReward      Int
+  progress      LessonProgress[]
+  quizzes       Quiz[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model LessonProgress {
+  id            String    @id @default(cuid())
+  childId       String
+  child         Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  lessonId      String
+  lesson        Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  score         Float?
+  attempts      Int       @default(1)
+  timeSpentMins Int       @default(0)
+
+  @@unique([childId, lessonId])
+}
+
+model Quiz {
+  id           String        @id @default(cuid())
+  lessonId     String
+  lesson       Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  questions    Json
+  passingScore Float
+  attempts     QuizAttempt[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  quizId      String
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score       Float
+  answers     Json
+  completedAt DateTime @default(now())
+}
+
+model LearningPath {
+  id                String     @id @default(cuid())
+  childId           String
+  child             Child      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  subjectId         String
+  subject           Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  currentLesson     Int        @default(1)
+  progress          Float      @default(0)
+  adaptedDifficulty Difficulty
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@unique([childId, subjectId])
+}
+
+model Reward {
+  id          String    @id @default(cuid())
+  childId     String
+  child       Child     @relation(fields: [childId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  icon        String
+  xpCost      Int
+  redeemed    Boolean   @default(false)
+  redeemedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model ParentReport {
+  id               String   @id @default(cuid())
+  childId          String
+  child            Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  period           String
+  subjectsProgress Json
+  strongAreas      String
+  weakAreas        String
+  recommendations  String
+  pdfUrl           String?
+  createdAt        DateTime @default(now())
+}

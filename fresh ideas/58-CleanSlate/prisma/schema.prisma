@@ -1,0 +1,157 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ClutterType {
+  FILES
+  EMAILS
+  APPS
+  SUBSCRIPTIONS
+  PHOTOS
+  DOWNLOADS
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum Recommendation {
+  KEEP
+  DELETE
+  ARCHIVE
+  REVIEW
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  declutterTasks DeclutterTask[]
+  subscriptions  Subscription[]
+  fileAudits     FileAudit[]
+  emailCleanups  EmailCleanup[]
+  progress       Progress[]
+
+  @@index([email])
+}
+
+model DeclutterTask {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       ClutterType
+  target     String
+  description String?
+  status     TaskStatus  @default(PENDING)
+  spaceSaved BigInt      @default(0)
+  itemsRemoved Int       @default(0)
+  startedAt  DateTime?
+  completedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([userId, type])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  provider    String?
+  cost        Float
+  currency    String   @default("USD")
+  billingCycle String  @default("monthly")
+  active      Boolean  @default(true)
+  cancelUrl   String?
+  nextBilling DateTime?
+  lastUsed    DateTime?
+  category    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([active])
+  @@index([cost])
+  @@index([userId, active])
+}
+
+model FileAudit {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path           String
+  fileName       String
+  extension      String?
+  size           BigInt
+  lastAccessed   DateTime?
+  lastModified   DateTime?
+  recommendation Recommendation @default(REVIEW)
+  processed      Boolean        @default(false)
+  action         String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([recommendation])
+  @@index([size])
+  @@index([lastAccessed])
+  @@index([processed])
+  @@index([userId, recommendation])
+}
+
+model EmailCleanup {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailAccount String
+  totalCount   Int      @default(0)
+  readCount    Int      @default(0)
+  unreadCount  Int      @default(0)
+  unsubscribed Int      @default(0)
+  deleted      Int      @default(0)
+  archived     Int      @default(0)
+  scanDate     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([scanDate])
+}
+
+model Progress {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           ClutterType
+  date           DateTime    @default(now())
+  spaceSaved     BigInt      @default(0)
+  itemsRemoved   Int         @default(0)
+  moneySaved     Float       @default(0)
+  streak         Int         @default(0)
+  level          Int         @default(1)
+  totalScore     Int         @default(0)
+  createdAt      DateTime    @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([date])
+  @@index([userId, date])
+}

@@ -1,0 +1,253 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  DPO           // Data Protection Officer
+  COMPLIANCE
+  MEMBER
+  VIEWER
+}
+
+enum RequestType {
+  ACCESS
+  DELETION
+  RECTIFICATION
+  PORTABILITY
+  OBJECTION
+  RESTRICTION
+}
+
+enum DSARStatus {
+  RECEIVED
+  IDENTITY_VERIFIED
+  SEARCHING
+  REVIEW
+  READY
+  DELIVERED
+  CLOSED
+}
+
+enum Regulation {
+  GDPR
+  CCPA
+  CPRA
+  LGPD
+  POPIA
+  PIPEDA
+}
+
+enum DataSourceType {
+  DATABASE
+  SAAS_APP
+  FILE_STORAGE
+  EMAIL
+  CRM
+  ANALYTICS
+}
+
+// ─── Organization ────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  domain    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  dataSubjects    DataSubject[]
+  dataSources     DataSource[]
+  complianceRules ComplianceRule[]
+  auditLogs       AuditLog[]
+
+  @@map("organizations")
+}
+
+// ─── User ────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  avatarUrl      String?
+  role           Role     @default(MEMBER)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedDSARs   DSARRequest[] @relation("Assignee")
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+// ─── DataSubject ─────────────────────────────────────────
+
+model DataSubject {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  name           String?
+  phone          String?
+  identifiers    Json?    // Additional identifiers: {customerId, accountId, cookieId, ...}
+  verifiedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dsarRequests DSARRequest[]
+
+  @@unique([organizationId, email])
+  @@map("data_subjects")
+}
+
+// ─── DSARRequest ─────────────────────────────────────────
+
+model DSARRequest {
+  id            String     @id @default(cuid())
+  dataSubjectId String
+  requestType   RequestType
+  status        DSARStatus @default(RECEIVED)
+  regulation    Regulation
+  description   String?    // Free-text from the data subject
+  deadline      DateTime   // Statutory deadline (e.g. 30 days for GDPR)
+  assigneeId    String?
+  priority      Int        @default(0)
+  notes         String?
+  completedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  dataSubject   DataSubject     @relation(fields: [dataSubjectId], references: [id], onDelete: Cascade)
+  assignee      User?           @relation("Assignee", fields: [assigneeId], references: [id])
+  discoveries   DataDiscovery[]
+  dataPackages  DataPackage[]
+
+  @@index([status, deadline])
+  @@index([dataSubjectId])
+  @@map("dsar_requests")
+}
+
+// ─── DataSource ──────────────────────────────────────────
+
+model DataSource {
+  id               String         @id @default(cuid())
+  organizationId   String
+  name             String
+  type             DataSourceType
+  description      String?
+  connectionConfig Json?          // Encrypted connection details
+  isActive         Boolean        @default(true)
+  lastSyncAt       DateTime?
+  recordCount      Int?           // Approximate number of records
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  discoveries  DataDiscovery[]
+
+  @@unique([organizationId, name])
+  @@map("data_sources")
+}
+
+// ─── DataDiscovery ───────────────────────────────────────
+
+model DataDiscovery {
+  id             String   @id @default(cuid())
+  dsarRequestId  String
+  dataSourceId   String
+  recordCount    Int      @default(0)
+  dataCategories String[] @default([]) // e.g. ["personal", "financial", "behavioral"]
+  status         String   @default("PENDING") // PENDING, SCANNING, FOUND, NO_DATA, ERROR
+  rawResults     Json?    // The discovered data records
+  errorMessage   String?
+  scannedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  dsarRequest DSARRequest @relation(fields: [dsarRequestId], references: [id], onDelete: Cascade)
+  dataSource  DataSource  @relation(fields: [dataSourceId], references: [id])
+
+  @@unique([dsarRequestId, dataSourceId])
+  @@map("data_discoveries")
+}
+
+// ─── DataPackage ─────────────────────────────────────────
+
+model DataPackage {
+  id            String   @id @default(cuid())
+  dsarRequestId String
+  downloadUrl   String?
+  format        String   @default("JSON") // JSON, CSV, PDF
+  sizeBytes     Int?
+  checksum      String?  // Integrity verification
+  expiresAt     DateTime?
+  generatedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  dsarRequest DSARRequest @relation(fields: [dsarRequestId], references: [id], onDelete: Cascade)
+
+  @@map("data_packages")
+}
+
+// ─── AuditLog ────────────────────────────────────────────
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  action         String   // e.g. "DSAR_CREATED", "DATA_EXPORTED", "STATUS_CHANGED"
+  entityType     String   // e.g. "DSARRequest", "DataSubject", "DataSource"
+  entityId       String
+  details        Json?    // Additional context about the action
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ─── ComplianceRule ──────────────────────────────────────
+
+model ComplianceRule {
+  id             String     @id @default(cuid())
+  organizationId String
+  regulation     Regulation
+  requirement    String     // Description of the compliance requirement
+  ruleLogic      Json?      // Machine-readable rule definition
+  autoApply      Boolean    @default(false)
+  isActive       Boolean    @default(true)
+  deadlineDays   Int?       // Statutory response deadline in days
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([regulation])
+  @@map("compliance_rules")
+}

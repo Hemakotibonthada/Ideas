@@ -1,0 +1,145 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum VitalType {
+  BLOOD_PRESSURE
+  HEART_RATE
+  TEMPERATURE
+  BLOOD_SUGAR
+  WEIGHT
+  OXYGEN_SATURATION
+  SLEEP_HOURS
+  STEPS
+  WATER_INTAKE
+}
+
+enum Source {
+  MANUAL
+  APPLE_HEALTH
+  GOOGLE_FIT
+  FITBIT
+  GARMIN
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String
+  dateOfBirth      DateTime?
+  bloodType        String?
+  height           Float?
+  weight           Float?
+  emergencyContact Json?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  vitalReadings    VitalReading[]
+  medications      Medication[]
+  symptoms         Symptom[]
+  doctorVisits     DoctorVisit[]
+  healthReports    HealthReport[]
+  emergencyProfile EmergencyProfile?
+}
+
+model VitalReading {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  type      VitalType
+  value     Float
+  unit      String
+  timestamp DateTime  @default(now())
+  notes     String?
+  source    Source    @default(MANUAL)
+
+  @@index([userId])
+  @@index([type])
+}
+
+model Medication {
+  id            String          @id @default(cuid())
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  name          String
+  dosage        String
+  frequency     String
+  startDate     DateTime
+  endDate       DateTime?
+  reminderTimes String[]
+  sideEffects   Json?
+  refillDate    DateTime?
+  logs          MedicationLog[]
+
+  @@index([userId])
+}
+
+model MedicationLog {
+  id           String     @id @default(cuid())
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  medicationId String
+  takenAt      DateTime   @default(now())
+  skipped      Boolean    @default(false)
+  skipReason   String?
+
+  @@index([medicationId])
+}
+
+model Symptom {
+  id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  name           String
+  severity       Int      @db.SmallInt
+  bodyArea       String?
+  startedAt      DateTime @default(now())
+  duration       String?
+  associatedMeds String[]
+
+  @@index([userId])
+}
+
+model DoctorVisit {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  doctorName    String
+  specialty     String?
+  date          DateTime
+  notes         String?
+  prescriptions Json?
+  followUpDate  DateTime?
+  attachments   String[]
+
+  @@index([userId])
+}
+
+model HealthReport {
+  id           String   @id @default(cuid())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  period       String
+  vitals       Json
+  medications  Json
+  symptoms     Json
+  doctorVisits Int      @default(0)
+  generated    DateTime @default(now())
+  pdfUrl       String?
+
+  @@index([userId])
+}
+
+model EmergencyProfile {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  conditions  String[]
+  allergies   String[]
+  medications String[]
+  bloodType   String?
+  organDonor  Boolean  @default(false)
+}

@@ -1,0 +1,172 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum IssueType {
+  MAINTENANCE
+  DEPOSIT
+  EVICTION
+  HARASSMENT
+  PRIVACY
+  DISCRIMINATION
+}
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum Role {
+  TENANT
+  LANDLORD
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  phone     String?
+  avatar    String?
+  role      Role     @default(TENANT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leases  Lease[]
+  issues  Issue[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Lease {
+  id        String      @id @default(cuid())
+  address   String
+  unit      String?
+  city      String
+  state     String
+  zipCode   String
+  landlord  String      // landlord name
+  landlordEmail   String?
+  landlordPhone   String?
+  startDate DateTime
+  endDate   DateTime
+  rent      Float
+  deposit   Float?
+  currency  String      @default("USD")
+  terms     String?     @db.Text
+  status    LeaseStatus @default(ACTIVE)
+  documentUrl String?   // uploaded lease document
+  autoRenew Boolean     @default(false)
+  noticePeriod Int?     // days required for notice
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issues Issue[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+  @@index([userId, status])
+}
+
+model TenantRight {
+  id           String   @id @default(cuid())
+  jurisdiction String   // e.g., "California", "New York City"
+  category     String   // e.g., "repair", "security deposit", "eviction"
+  title        String
+  description  String   @db.Text
+  statute      String?  // legal statute reference
+  link         String?  // link to official source
+  lastVerified DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([jurisdiction])
+  @@index([category])
+  @@index([jurisdiction, category])
+  @@unique([jurisdiction, statute])
+}
+
+model Issue {
+  id          String      @id @default(cuid())
+  type        IssueType
+  title       String
+  description String      @db.Text
+  status      IssueStatus @default(OPEN)
+  priority    Int         @default(3) // 1=critical, 5=low
+  evidence    String[]    // URLs to evidence files
+  resolution  String?     @db.Text
+  reportedAt  DateTime    @default(now())
+  resolvedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leaseId String?
+  lease   Lease? @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+
+  timeline IssueTimeline[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([userId, status])
+  @@index([leaseId])
+}
+
+model IssueTimeline {
+  id          String   @id @default(cuid())
+  action      String   // e.g., "created", "landlord contacted", "evidence added"
+  description String?  @db.Text
+  attachments String[]
+  createdAt   DateTime @default(now())
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId])
+  @@index([createdAt])
+}
+
+model LegalResource {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  category    String   // e.g., "template", "guide", "helpline", "organization"
+  url         String?
+  phone       String?
+  email       String?
+  jurisdiction String?
+  free        Boolean  @default(true)
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([jurisdiction])
+}

@@ -1,0 +1,142 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum SessionType {
+  POMODORO
+  DEEP_WORK
+  FLOW
+  BREAK
+}
+
+enum DistractionCategory {
+  SOCIAL_MEDIA
+  NEWS
+  EMAIL
+  MESSAGING
+  ENTERTAINMENT
+  OTHER
+}
+
+enum BlockRuleType {
+  APP
+  WEBSITE
+  NOTIFICATION
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id                    String         @id @default(cuid())
+  email                 String         @unique
+  name                  String
+  dailyFocusGoalMins    Int            @default(240)
+  preferredWorkDuration Int            @default(25)  // minutes
+  breakDuration         Int            @default(5)   // minutes
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  focusSessions         FocusSession[]
+  projects              Project[]
+  dailyStats            DailyStats[]
+  blockRules            BlockRule[]
+  streak                Streak?
+}
+
+model FocusSession {
+  id                 String      @id @default(cuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt          DateTime    @default(now())
+  endedAt            DateTime?
+  durationMins       Int?
+  type               SessionType @default(POMODORO)
+  deepWorkScore      Int?        // 0-100
+  distractionsBlocked Int        @default(0)
+  flowStateDetected  Boolean     @default(false)
+  projectId          String?
+  project            Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt          DateTime    @default(now())
+
+  distractions       Distraction[]
+
+  @@index([userId, startedAt])
+  @@index([projectId])
+}
+
+model Project {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  color          String         @default("#6366f1")
+  totalFocusMins Int            @default(0)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  focusSessions  FocusSession[]
+
+  @@index([userId, isActive])
+}
+
+model Distraction {
+  id        String              @id @default(cuid())
+  sessionId String
+  session   FocusSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  appName   String?
+  url       String?
+  blockedAt DateTime            @default(now())
+  category  DistractionCategory @default(OTHER)
+
+  @@index([sessionId])
+}
+
+model DailyStats {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                DateTime @db.Date
+  totalFocusMins      Int      @default(0)
+  deepWorkMins        Int      @default(0)
+  sessionsCompleted   Int      @default(0)
+  longestStreak       Int      @default(0) // minutes
+  distractionsBlocked Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model BlockRule {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pattern   String        // e.g. "twitter.com", "Slack"
+  type      BlockRuleType
+  isActive  Boolean       @default(true)
+  schedule  Json?         // e.g. { days: ["MON","TUE"], startTime: "09:00", endTime: "17:00" }
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, isActive])
+}
+
+model Streak {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentDays  Int      @default(0)
+  longestDays  Int      @default(0)
+  startedAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

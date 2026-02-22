@@ -1,0 +1,39 @@
+{
+  "name": "stocksync",
+  "version": "1.0.0",
+  "description": "Enterprise Inventory & Warehouse Management System",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3003",
+    "build": "next build",
+    "start": "next start",
+    "db:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "@tanstack/react-query": "^5.17.0",
+    "bcryptjs": "^2.4.3",
+    "chart.js": "^4.4.1",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.2.0",
+    "next": "14.0.4",
+    "next-auth": "^4.24.5",
+    "qrcode.react": "^3.1.0",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.49.3",
+    "react-hot-toast": "^2.4.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.47",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.33",
+    "prisma": "^5.7.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
+  }
+}

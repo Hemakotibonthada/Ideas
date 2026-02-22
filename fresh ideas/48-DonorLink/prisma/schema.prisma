@@ -1,0 +1,180 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum BloodType {
+  A_POS
+  A_NEG
+  B_POS
+  B_NEG
+  AB_POS
+  AB_NEG
+  O_POS
+  O_NEG
+}
+
+enum DonationType {
+  WHOLE_BLOOD
+  PLATELETS
+  PLASMA
+  DOUBLE_RED
+  ORGAN
+}
+
+enum DonationStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  DEFERRED
+}
+
+enum Urgency {
+  NORMAL
+  URGENT
+  CRITICAL
+  EMERGENCY
+}
+
+enum EligibilityStatus {
+  ELIGIBLE
+  TEMPORARILY_DEFERRED
+  PERMANENTLY_DEFERRED
+  PENDING_REVIEW
+}
+
+enum Role {
+  DONOR
+  RECIPIENT
+  CENTER_ADMIN
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  phone     String?
+  avatar    String?
+  role      Role     @default(DONOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  donorProfile DonorProfile?
+  donations    DonationRecord[]
+  requests     BloodRequest[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model DonorProfile {
+  id            String            @id @default(cuid())
+  bloodType     BloodType
+  organDonor    Boolean           @default(false)
+  lastDonation  DateTime?
+  nextEligible  DateTime?
+  eligibility   EligibilityStatus @default(ELIGIBLE)
+  totalDonations Int              @default(0)
+  dateOfBirth   DateTime?
+  weight        Float?            // kg
+  medicalNotes  String?           @db.Text
+  emergencyContact String?
+  emergencyPhone   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([bloodType])
+  @@index([eligibility])
+  @@index([bloodType, eligibility])
+}
+
+model DonationRecord {
+  id         String         @id @default(cuid())
+  type       DonationType
+  date       DateTime
+  status     DonationStatus @default(SCHEDULED)
+  volume     Float?         // ml donated
+  duration   Int?           // minutes
+  hemoglobin Float?         // pre-donation hemoglobin level
+  notes      String?        @db.Text
+  certificate String?       // donation certificate URL
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centerId String
+  center   Center @relation(fields: [centerId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([centerId])
+  @@index([date])
+  @@index([status])
+  @@index([userId, date])
+}
+
+model BloodRequest {
+  id          String    @id @default(cuid())
+  bloodType   BloodType
+  urgency     Urgency   @default(NORMAL)
+  units       Int       @default(1)
+  hospital    String
+  hospitalAddress String?
+  reason      String?   @db.Text
+  fulfilled   Boolean   @default(false)
+  fulfilledAt DateTime?
+  expiresAt   DateTime?
+  contactName String?
+  contactPhone String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  requesterId String
+  requester   User   @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+
+  @@index([bloodType])
+  @@index([urgency])
+  @@index([fulfilled])
+  @@index([bloodType, fulfilled])
+  @@index([requesterId])
+}
+
+model Center {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  state       String?
+  country     String   @default("US")
+  zipCode     String?
+  lat         Float?
+  lng         Float?
+  phone       String?
+  email       String?
+  website     String?
+  operatingHours Json? // JSON with day -> hours mapping
+  services    DonationType[]
+  acceptsWalkIn Boolean @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  donations DonationRecord[]
+
+  @@index([city])
+  @@index([active])
+  @@index([lat, lng])
+}

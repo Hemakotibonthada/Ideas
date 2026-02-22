@@ -1,0 +1,134 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum SpotType {
+  STREET
+  GARAGE
+  LOT
+  METERED
+  FREE
+}
+
+enum SpotStatus {
+  AVAILABLE
+  OCCUPIED
+  UNKNOWN
+  RESERVED
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  avatar    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports   SpotReport[]
+  favorites Favorite[]
+
+  @@index([email])
+}
+
+model ParkingSpot {
+  id           String     @id @default(cuid())
+  lat          Float
+  lng          Float
+  address      String
+  type         SpotType
+  available    Boolean    @default(true)
+  status       SpotStatus @default(AVAILABLE)
+  price        Float?     // per hour, null if free
+  currency     String     @default("USD")
+  maxDuration  Int?       // max parking duration in minutes
+  handicap     Boolean    @default(false)
+  electric     Boolean    @default(false)
+  covered      Boolean    @default(false)
+  description  String?    @db.Text
+  lastReported DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  zoneId String?
+  zone   Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  reports   SpotReport[]
+  favorites Favorite[]
+
+  @@index([lat, lng])
+  @@index([type])
+  @@index([available])
+  @@index([zoneId])
+  @@index([status])
+}
+
+model SpotReport {
+  id        String     @id @default(cuid())
+  status    SpotStatus
+  comment   String?    @db.Text
+  imageUrl  String?
+  timestamp DateTime   @default(now())
+  verified  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  reporterId String
+  reporter   User       @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  spotId     String
+  spot       ParkingSpot @relation(fields: [spotId], references: [id], onDelete: Cascade)
+
+  @@index([spotId])
+  @@index([reporterId])
+  @@index([timestamp])
+  @@index([spotId, timestamp])
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  city        String
+  state       String?
+  country     String   @default("US")
+  boundaries  Json?    // GeoJSON polygon
+  rules       String?  @db.Text
+  maxPrice    Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  spots ParkingSpot[]
+
+  @@index([city])
+  @@unique([name, city])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  alias     String?  // user-given nickname
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spotId String
+  spot   ParkingSpot @relation(fields: [spotId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, spotId])
+  @@index([userId])
+}

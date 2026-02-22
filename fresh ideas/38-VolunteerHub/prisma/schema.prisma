@@ -1,0 +1,183 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum OrgType {
+  NONPROFIT
+  COMMUNITY
+  GOVERNMENT
+  SCHOOL
+  RELIGIOUS
+  ENVIRONMENTAL
+  HEALTH
+  ANIMAL
+}
+
+enum OpportunityCategory {
+  ENVIRONMENT
+  EDUCATION
+  HEALTH
+  ANIMAL_WELFARE
+  FOOD_BANK
+  ELDERLY_CARE
+  DISASTER_RELIEF
+  MENTORING
+  CONSTRUCTION
+  TECH
+  ARTS
+  ADVOCACY
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WAITLISTED
+  COMPLETED
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String
+  location     String?
+  bio          String?
+  skills       String[]
+  interests    String[]
+  totalHours   Float         @default(0)
+  impactScore  Float         @default(0)
+  verified     Boolean       @default(false)
+  applications Application[]
+  volunteerLogs VolunteerLog[]
+  certificates Certificate[]
+  teamsLed     Team[]        @relation("TeamLeader")
+  teamMembers  TeamMember[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Organization {
+  id           String         @id @default(cuid())
+  name         String
+  description  String
+  type         OrgType
+  address      String?
+  website      String?
+  contactEmail String
+  verified     Boolean        @default(false)
+  logoUrl      String?
+  opportunities Opportunity[]
+  impactMetrics ImpactMetric[]
+  teams        Team[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model Opportunity {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  category       OpportunityCategory
+  location       String?
+  lat            Float?
+  lng            Float?
+  date           DateTime
+  startTime      DateTime?
+  endTime        DateTime?
+  spotsTotal     Int
+  spotsFilled    Int                 @default(0)
+  skills         String[]
+  remote         Boolean             @default(false)
+  applications   Application[]
+  volunteerLogs  VolunteerLog[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model Application {
+  id            String            @id @default(cuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  status        ApplicationStatus @default(PENDING)
+  message       String?
+  appliedAt     DateTime          @default(now())
+  respondedAt   DateTime?
+
+  @@unique([userId, opportunityId])
+}
+
+model VolunteerLog {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  hoursLogged   Float
+  date          DateTime    @db.Date
+  verified      Boolean     @default(false)
+  verifiedBy    String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+}
+
+model ImpactMetric {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  value          Float
+  unit           String
+  period         String
+  description    String?
+  createdAt      DateTime     @default(now())
+}
+
+model Certificate {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  hours            Float
+  organization     String
+  issuedAt         DateTime @default(now())
+  pdfUrl           String?
+  verificationCode String   @unique
+}
+
+model Team {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leaderId       String
+  leader         User         @relation("TeamLeader", fields: [leaderId], references: [id])
+  memberCount    Int          @default(0)
+  members        TeamMember[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+}

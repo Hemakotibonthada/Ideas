@@ -1,0 +1,175 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  industry         String
+  headcount        Int?
+  plan             Plan     @default(STANDARD)
+  stripeCustomerId String?  @unique
+  facilities       Facility[]
+  suppliers        Supplier[]
+  reports          ESGReport[]
+  credits          CarbonCredit[]
+  users            User[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  passwordHash   String
+  role           Role     @default(VIEWER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+}
+
+model Facility {
+  id             String   @id @default(cuid())
+  name           String
+  address        String
+  country        String
+  type           FacilityType
+  emissions      Emission[]
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+}
+
+model Emission {
+  id            String     @id @default(cuid())
+  scope         EmissionScope
+  category      String
+  source        String
+  co2eKg        Float
+  unit          String
+  quantity      Float
+  emissionFactor Float
+  evidenceUrl   String?
+  period        DateTime
+  verified      Boolean    @default(false)
+  facilityId    String
+  facility      Facility   @relation(fields: [facilityId], references: [id])
+  createdAt     DateTime   @default(now())
+
+  @@index([scope, period])
+}
+
+model Supplier {
+  id             String   @id @default(cuid())
+  name           String
+  tier           Int      @default(1)
+  country        String
+  riskScore      Float?
+  scope3Emissions Float?
+  lastAuditDate  DateTime?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+}
+
+model CarbonCredit {
+  id             String   @id @default(cuid())
+  registry       String
+  projectName    String
+  projectType    String
+  vintage        Int
+  tonnes         Float
+  pricePerTonne  Float
+  status         CreditStatus @default(ACTIVE)
+  serialNumber   String   @unique
+  retiredAt      DateTime?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  purchasedAt    DateTime @default(now())
+}
+
+model ESGReport {
+  id             String     @id @default(cuid())
+  framework      ReportFramework
+  period         String
+  status         ReportStatus @default(DRAFT)
+  totalScope1    Float?
+  totalScope2    Float?
+  totalScope3    Float?
+  totalOffset    Float?
+  netEmissions   Float?
+  pdfUrl         String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime @default(now())
+  publishedAt    DateTime?
+}
+
+model AuditTrail {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  userId    String?
+  changes   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+enum Plan {
+  STANDARD
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum FacilityType {
+  OFFICE
+  FACTORY
+  WAREHOUSE
+  DATA_CENTER
+  RETAIL
+  FLEET
+}
+
+enum EmissionScope {
+  SCOPE_1
+  SCOPE_2
+  SCOPE_3
+}
+
+enum CreditStatus {
+  ACTIVE
+  RETIRED
+  EXPIRED
+  PENDING
+}
+
+enum ReportFramework {
+  GHG_PROTOCOL
+  CDP
+  TCFD
+  CSRD
+  SEC_CLIMATE
+  ISSB
+}
+
+enum ReportStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}

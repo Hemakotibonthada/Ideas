@@ -1,0 +1,140 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum SkillCategory {
+  TECH
+  LANGUAGE
+  MUSIC
+  ART
+  FITNESS
+  COOKING
+  BUSINESS
+  SCIENCE
+  WRITING
+  OTHER
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id            String          @id @default(cuid())
+  email         String          @unique
+  name          String
+  level         Int             @default(1)
+  totalXP       Int             @default(0)
+  currentStreak Int             @default(0)
+  longestStreak Int             @default(0)
+  avatarUrl     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  skills        Skill[]
+  achievements  Achievement[]
+  dailyLogs     DailyLog[]
+  challenges    UserChallenge[]
+}
+
+model Skill {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  category      SkillCategory @default(OTHER)
+  level         Int           @default(1)
+  xp            Int           @default(0)
+  icon          String?
+  color         String        @default("#6366f1")
+  parentSkillId String?
+  parentSkill   Skill?        @relation("SkillTree", fields: [parentSkillId], references: [id])
+  childSkills   Skill[]       @relation("SkillTree")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  dailyLogs     DailyLog[]
+
+  @@index([userId, category])
+  @@index([parentSkillId])
+}
+
+model LearningPath {
+  id             String     @id @default(cuid())
+  name           String
+  description    String?
+  skills         Json       // Ordered array of skill definitions / milestones
+  estimatedHours Float
+  difficulty     Difficulty @default(BEGINNER)
+  isPublic       Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  icon        String?
+  xpReward    Int       @default(0)
+  unlockedAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model DailyLog {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId         String
+  skill           Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  date            DateTime @db.Date
+  minutesPracticed Int
+  xpEarned        Int      @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, skillId, date])
+  @@index([userId, date])
+}
+
+model Challenge {
+  id              String          @id @default(cuid())
+  title           String
+  description     String?
+  skillCategory   SkillCategory
+  durationDays    Int
+  xpReward        Int             @default(0)
+  participantsCount Int           @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  participants    UserChallenge[]
+}
+
+model UserChallenge {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  progress    Float     @default(0) // 0-100 percentage
+  completedAt DateTime?
+  joinedAt    DateTime  @default(now())
+
+  @@unique([userId, challengeId])
+}

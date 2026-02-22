@@ -1,0 +1,150 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum SkillLevel {
+  NOVICE
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ItemCategory {
+  ELECTRONICS
+  APPLIANCES
+  FURNITURE
+  CLOTHING
+  AUTOMOTIVE
+  PLUMBING
+  ELECTRICAL
+  BICYCLE
+  SHOES
+  OTHER
+}
+
+enum Difficulty {
+  EASY
+  MODERATE
+  HARD
+  EXPERT_ONLY
+}
+
+enum RepairStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  NEEDS_PROFESSIONAL
+}
+
+model User {
+  id               String          @id @default(cuid())
+  email            String          @unique
+  name             String
+  skillLevel       SkillLevel      @default(NOVICE)
+  savedGuides      String[]
+  repairsCompleted Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  authoredGuides   RepairGuide[]   @relation("GuideAuthor")
+  repairAttempts   RepairAttempt[]
+  questions        Question[]      @relation("QuestionAsker")
+  answers          Question[]      @relation("QuestionAnswerer")
+}
+
+model Item {
+  id           String       @id @default(cuid())
+  name         String
+  category     ItemCategory
+  brand        String?
+  model        String?
+  imageUrl     String?
+  commonIssues Json?
+  repairGuides RepairGuide[]
+}
+
+model RepairGuide {
+  id            String          @id @default(cuid())
+  item          Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId        String
+  title         String
+  difficulty    Difficulty
+  estimatedTime String
+  tools         String[]
+  parts         Json?
+  steps         Json
+  videoUrl      String?
+  author        User            @relation("GuideAuthor", fields: [authorId], references: [id])
+  authorId      String
+  rating        Float           @default(0)
+  reviewCount   Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  repairAttempts RepairAttempt[]
+  questions     Question[]
+
+  @@index([itemId])
+  @@index([authorId])
+  @@index([difficulty])
+}
+
+model RepairAttempt {
+  id          String       @id @default(cuid())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  guide       RepairGuide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  guideId     String
+  status      RepairStatus @default(IN_PROGRESS)
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  costSaved   Float?
+  notes       String?
+  photos      String[]
+
+  @@index([userId])
+  @@index([guideId])
+}
+
+model Part {
+  id              String   @id @default(cuid())
+  name            String
+  partNumber      String?
+  compatibleItems String[]
+  price           Float?
+  purchaseUrl     String?
+  supplier        String?
+}
+
+model LocalRepairShop {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  lat         Float
+  lng         Float
+  specialties String[]
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  phone       String?
+  website     String?
+}
+
+model Question {
+  id           String       @id @default(cuid())
+  user         User         @relation("QuestionAsker", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  guide        RepairGuide  @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  guideId      String
+  text         String
+  answer       String?
+  answeredBy   User?        @relation("QuestionAnswerer", fields: [answeredById], references: [id])
+  answeredById String?
+  createdAt    DateTime     @default(now())
+
+  @@index([guideId])
+  @@index([userId])
+}

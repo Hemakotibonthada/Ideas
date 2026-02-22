@@ -1,0 +1,110 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum VenueType {
+  RESTAURANT
+  STORE
+  HOSPITAL
+  DMV
+  BANK
+  PHARMACY
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  waitReports WaitReport[]
+  favorites   Favorite[]
+  alerts      Alert[]
+
+  @@index([email])
+}
+
+model Venue {
+  id        String    @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  state     String
+  zipCode   String
+  type      VenueType
+  latitude  Float?
+  longitude Float?
+  phone     String?
+  avgWait   Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  waitReports WaitReport[]
+  favorites   Favorite[]
+  alerts      Alert[]
+
+  @@index([type])
+  @@index([city, state])
+  @@index([latitude, longitude])
+  @@index([avgWait])
+  @@index([name])
+}
+
+model WaitReport {
+  id          String   @id @default(cuid())
+  venueId     String
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  waitMinutes Int
+  queueLength Int?
+  timestamp   DateTime @default(now())
+  dayOfWeek   Int?
+  hourOfDay   Int?
+  notes       String?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([venueId])
+  @@index([reporterId])
+  @@index([timestamp])
+  @@index([venueId, timestamp])
+  @@index([dayOfWeek, hourOfDay])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, venueId])
+  @@index([userId])
+  @@index([venueId])
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  threshold Int
+  active    Boolean  @default(true)
+  lastSent  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, venueId])
+  @@index([active])
+  @@index([venueId, threshold])
+}

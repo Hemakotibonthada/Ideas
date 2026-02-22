@@ -1,0 +1,212 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum RailType {
+  ACH
+  WIRE
+  SWIFT
+  SEPA
+  CRYPTO
+  BNPL
+  CHECK
+  REAL_TIME_PAYMENT
+}
+
+enum PaymentStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum TransactionStatus {
+  INITIATED
+  PENDING
+  SETTLED
+  FAILED
+  REVERSED
+}
+
+enum ReconciliationStatus {
+  MATCHED
+  PARTIAL_MATCH
+  UNMATCHED
+  DISPUTED
+  RESOLVED
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  CAD
+  AUD
+  USDC
+  ETH
+  BTC
+}
+
+enum Chain {
+  ETHEREUM
+  POLYGON
+  SOLANA
+  BASE
+  BITCOIN
+}
+
+// ── Models ────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users           User[]
+  paymentProfile  PaymentProfile?
+  bankAccounts    BankAccount[]
+  cryptoWallets   CryptoWallet[]
+  payoutSchedules PayoutSchedule[]
+  sentRequests    PaymentRequest[] @relation("SenderOrg")
+  receivedRequests PaymentRequest[] @relation("ReceiverOrg")
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String       @unique
+  name           String
+  role           Role         @default(MEMBER)
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model PaymentProfile {
+  id               String       @id @default(cuid())
+  organizationId   String       @unique
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  defaultCurrency  Currency     @default(USD)
+  supportedRails   String[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model PaymentRequest {
+  id             String        @id @default(cuid())
+  senderOrgId    String
+  senderOrg      Organization  @relation("SenderOrg", fields: [senderOrgId], references: [id])
+  receiverOrgId  String
+  receiverOrg    Organization  @relation("ReceiverOrg", fields: [receiverOrgId], references: [id])
+  amount         Decimal
+  currency       Currency
+  dueDate        DateTime
+  status         PaymentStatus @default(PENDING)
+  description    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  rails PaymentRail[]
+}
+
+model PaymentRail {
+  id               String         @id @default(cuid())
+  paymentRequestId String
+  paymentRequest   PaymentRequest @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+  railType         RailType
+  providerRef      String?
+  fees             Decimal        @default(0)
+  exchangeRate     Decimal?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  transactions Transaction[]
+}
+
+model Transaction {
+  id             String            @id @default(cuid())
+  paymentRailId  String
+  paymentRail    PaymentRail       @relation(fields: [paymentRailId], references: [id], onDelete: Cascade)
+  amount         Decimal
+  status         TransactionStatus @default(INITIATED)
+  settledAt      DateTime?
+  failureReason  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  reconciliation Reconciliation?
+}
+
+model Reconciliation {
+  id              String               @id @default(cuid())
+  transactionId   String               @unique
+  transaction     Transaction          @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  invoiceRef      String?
+  matchConfidence Float
+  status          ReconciliationStatus @default(UNMATCHED)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model BankAccount {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bankName       String
+  accountNumber  String
+  routingNumber  String
+  currency       Currency     @default(USD)
+  verified       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model CryptoWallet {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  chain          Chain
+  address        String
+  label          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model PayoutSchedule {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  frequency      String
+  nextPayoutDate DateTime
+  minimumAmount  Decimal
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}

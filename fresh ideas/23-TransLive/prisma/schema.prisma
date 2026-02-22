@@ -1,0 +1,116 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Plan {
+  FREE
+  PLUS
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  name               String
+  nativeLanguage     String
+  preferredLanguages String[]
+  plan               Plan                 @default(FREE)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  conversations      Conversation[]
+  translationHistory TranslationHistory[]
+  usageStats         UsageStats[]
+  phrasebooks        Phrasebook[]
+}
+
+model Conversation {
+  id           String    @id @default(cuid())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  title        String
+  participants Json
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  messageCount Int       @default(0)
+  messages     Message[]
+
+  @@index([userId])
+}
+
+model Message {
+  id               String       @id @default(cuid())
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId   String
+  speakerId        String
+  originalText     String
+  originalLang     String
+  translations     Json
+  audioUrl         String?
+  translatedAudioUrl String?
+  timestamp        DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model Language {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  isSupported Boolean @default(true)
+  ttsAvailable Boolean @default(false)
+  sttAvailable Boolean @default(false)
+}
+
+model TranslationHistory {
+  id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  sourceText     String
+  sourceLang     String
+  targetLang     String
+  translatedText String
+  usedAt         DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UsageStats {
+  id                   String @id @default(cuid())
+  user                 User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  period               String
+  charactersTranslated Int    @default(0)
+  minutesSpoken        Float  @default(0)
+  conversationCount    Int    @default(0)
+
+  @@index([userId])
+}
+
+model Phrasebook {
+  id       String        @id @default(cuid())
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  title    String
+  language String
+  phrases  SavedPhrase[]
+
+  @@index([userId])
+}
+
+model SavedPhrase {
+  id           String     @id @default(cuid())
+  phrasebook   Phrasebook @relation(fields: [phrasebookId], references: [id], onDelete: Cascade)
+  phrasebookId String
+  original     String
+  translated   String
+  audioUrl     String?
+  category     String?
+
+  @@index([phrasebookId])
+}

@@ -1,0 +1,154 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TaskCategory {
+  PACKING
+  UTILITIES
+  ADDRESS_CHANGE
+  CLEANING
+  DOCUMENTS
+}
+
+enum MoveStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  moves Move[]
+
+  @@index([email])
+}
+
+model Move {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAddress String
+  fromCity    String
+  fromState   String
+  fromZip     String
+  toAddress   String
+  toCity      String
+  toState     String
+  toZip       String
+  moveDate    DateTime
+  budget      Float?
+  status      MoveStatus @default(PLANNING)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  tasks     Task[]
+  quotes    Quote[]
+  inventory Inventory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([moveDate])
+}
+
+model Task {
+  id        String       @id @default(cuid())
+  moveId    String
+  move      Move         @relation(fields: [moveId], references: [id], onDelete: Cascade)
+  title     String
+  category  TaskCategory
+  dueDate   DateTime?
+  completed Boolean      @default(false)
+  priority  Int          @default(0)
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([moveId])
+  @@index([category])
+  @@index([completed])
+  @@index([dueDate])
+}
+
+model Mover {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  price       Float?
+  priceUnit   String?
+  verified    Boolean  @default(false)
+  insured     Boolean  @default(false)
+  licensed    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quotes Quote[]
+
+  @@index([rating])
+  @@index([verified])
+  @@index([name])
+}
+
+model Quote {
+  id          String      @id @default(cuid())
+  moveId      String
+  move        Move        @relation(fields: [moveId], references: [id], onDelete: Cascade)
+  moverId     String
+  mover       Mover       @relation(fields: [moverId], references: [id], onDelete: Cascade)
+  amount      Float
+  description String?
+  validUntil  DateTime?
+  status      QuoteStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([moveId])
+  @@index([moverId])
+  @@index([status])
+  @@unique([moveId, moverId])
+}
+
+model Inventory {
+  id          String   @id @default(cuid())
+  moveId      String
+  move        Move     @relation(fields: [moveId], references: [id], onDelete: Cascade)
+  name        String
+  room        String?
+  quantity    Int      @default(1)
+  weight      Float?
+  fragile     Boolean  @default(false)
+  packed      Boolean  @default(false)
+  boxNumber   String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([moveId])
+  @@index([room])
+  @@index([packed])
+}

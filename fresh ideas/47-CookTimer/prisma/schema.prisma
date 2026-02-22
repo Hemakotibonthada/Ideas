@@ -1,0 +1,170 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum StepType {
+  PREP
+  COOK
+  REST
+  SERVE
+}
+
+enum SessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  avatar    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipes      Recipe[]
+  sessions     TimerSession[]
+  mealPlans    MealPlan[]
+
+  @@index([email])
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  totalTime   Int      // total time in minutes
+  prepTime    Int?     // prep time in minutes
+  cookTime    Int?     // cook time in minutes
+  restTime    Int?     // rest/cooling time in minutes
+  servings    Int      @default(1)
+  difficulty  Int?     @default(3) // 1-5
+  cuisine     String?
+  imageUrl    String?
+  sourceUrl   String?
+  notes       String?  @db.Text
+  favorite    Boolean  @default(false)
+  timesCooked Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  steps    CookingStep[]
+  sessions TimerSession[]
+  mealPlanItems MealPlanItem[]
+
+  @@index([userId])
+  @@index([name])
+  @@index([userId, favorite])
+}
+
+model CookingStep {
+  id          String   @id @default(cuid())
+  description String   @db.Text
+  type        StepType @default(COOK)
+  duration    Int      // duration in seconds
+  order       Int      // step sequence number
+  alert       Boolean  @default(true) // whether to alert when timer ends
+  alertSound  String?  // custom alert sound
+  temperature Float?   // temperature in Fahrenheit
+  tempUnit    String?  @default("F") // "F" or "C"
+  tips        String?  @db.Text
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([recipeId, order])
+  @@unique([recipeId, order])
+}
+
+model TimerSession {
+  id          String        @id @default(cuid())
+  startTime   DateTime      @default(now())
+  endTime     DateTime?
+  status      SessionStatus @default(ACTIVE)
+  currentStep Int           @default(1) // current step order number
+  elapsed     Int           @default(0) // elapsed time in seconds
+  notes       String?       @db.Text
+  rating      Int?          // 1-5 post-cook rating
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([recipeId])
+  @@index([status])
+  @@index([userId, status])
+}
+
+model MealPlan {
+  id        String   @id @default(cuid())
+  name      String
+  weekStart DateTime @db.Date
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items MealPlanItem[]
+
+  @@index([userId])
+  @@index([weekStart])
+  @@unique([userId, weekStart, name])
+}
+
+model MealPlanItem {
+  id       String    @id @default(cuid())
+  day      DayOfWeek
+  mealType String    // "breakfast", "lunch", "dinner", "snack"
+  servings Int       @default(1)
+  notes    String?
+
+  mealPlanId String
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipeId   String
+  recipe     Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([mealPlanId])
+  @@index([recipeId])
+  @@unique([mealPlanId, day, mealType])
+}

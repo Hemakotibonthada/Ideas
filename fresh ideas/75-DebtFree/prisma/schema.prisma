@@ -1,0 +1,128 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum DebtType {
+  CREDIT_CARD
+  STUDENT_LOAN
+  MORTGAGE
+  AUTO_LOAN
+  PERSONAL
+  MEDICAL
+}
+
+enum PayoffStrategy {
+  SNOWBALL
+  AVALANCHE
+  HYBRID
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  avatar      String?
+  monthlyIncome Float?
+  currency    String   @default("USD")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  debts        Debt[]
+  paymentPlans PaymentPlan[]
+  milestones   Milestone[]
+
+  @@index([email])
+}
+
+model Debt {
+  id             String   @id @default(cuid())
+  name           String
+  type           DebtType
+  balance        Float
+  originalBalance Float
+  interestRate   Float    // annual percentage rate
+  minimumPayment Float
+  dueDate        DateTime
+  lender         String?
+  accountNumber  String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  payments Payment[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([active])
+  @@index([userId, active])
+  @@index([dueDate])
+}
+
+model PaymentPlan {
+  id           String         @id @default(cuid())
+  strategy     PayoffStrategy
+  totalMonths  Int
+  totalInterest Float
+  monthlyExtra Float          @default(0)
+  active       Boolean        @default(true)
+  startDate    DateTime       @default(now())
+  projectedEnd DateTime?
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([strategy])
+  @@index([active])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  amount    Float
+  date      DateTime
+  principal Float
+  interest  Float
+  extra     Float    @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  debt   Debt   @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  debtId String
+
+  @@index([debtId])
+  @@index([date])
+  @@index([debtId, date])
+}
+
+model Milestone {
+  id        String    @id @default(cuid())
+  title     String
+  target    Float     // target amount paid off
+  achieved  Boolean   @default(false)
+  date      DateTime? // date achieved
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([achieved])
+  @@index([userId, achieved])
+}

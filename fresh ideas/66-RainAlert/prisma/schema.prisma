@@ -1,0 +1,143 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum PrecipType {
+  RAIN
+  SNOW
+  SLEET
+  HAIL
+  DRIZZLE
+  THUNDERSTORM
+}
+
+enum Intensity {
+  LIGHT
+  MODERATE
+  HEAVY
+  EXTREME
+}
+
+enum AlertChannel {
+  PUSH
+  EMAIL
+  SMS
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String
+  phone            String?
+  timezone         String            @default("UTC")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  locations        Location[]
+  alertPreferences AlertPreference[]
+
+  @@index([email])
+}
+
+model Location {
+  id        String         @id @default(cuid())
+  userId    String
+  name      String
+  lat       Float
+  lng       Float
+  address   String?
+  city      String?
+  country   String?
+  isPrimary Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weatherAlerts WeatherAlert[]
+  forecasts     Forecast[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([lat, lng])
+  @@index([city])
+}
+
+model WeatherAlert {
+  id          String     @id @default(cuid())
+  locationId  String
+  type        PrecipType
+  probability Float      // 0.0-1.0
+  startTime   DateTime
+  endTime     DateTime
+  intensity   Intensity
+  amount      Float?     // mm or inches
+  windSpeed   Float?     // km/h
+  message     String?
+  source      String?
+  notified    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([locationId])
+  @@index([type])
+  @@index([startTime])
+  @@index([locationId, startTime])
+  @@index([probability(sort: Desc)])
+  @@index([intensity])
+}
+
+model Forecast {
+  id            String   @id @default(cuid())
+  locationId    String
+  timestamp     DateTime
+  precipitation Float    // mm
+  humidity      Float    // percentage
+  temperature   Float    // celsius
+  feelsLike     Float?
+  windSpeed     Float?
+  windDirection Int?     // degrees
+  uvIndex       Float?
+  cloudCover    Float?   // percentage
+  visibility    Float?   // km
+  pressure      Float?   // hPa
+  dewPoint      Float?
+  source        String?
+  createdAt     DateTime @default(now())
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, timestamp])
+  @@index([locationId])
+  @@index([timestamp])
+  @@index([locationId, timestamp])
+}
+
+model AlertPreference {
+  id             String       @id @default(cuid())
+  userId         String
+  channel        AlertChannel @default(PUSH)
+  leadTime       Int          // minutes before event
+  minProbability Float        // 0.0-1.0 threshold
+  precipTypes    PrecipType[]
+  minIntensity   Intensity    @default(LIGHT)
+  quietStart     String?      // "22:00" format
+  quietEnd       String?      // "07:00" format
+  enabled        Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, enabled])
+}

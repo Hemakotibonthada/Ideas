@@ -1,0 +1,182 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum TechCategory {
+  PHONE
+  COMPUTER
+  EMAIL
+  VIDEO_CALL
+  SOCIAL_MEDIA
+  SMART_HOME
+  BANKING
+  SHOPPING
+}
+
+enum Urgency {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RequestStatus {
+  PENDING
+  MATCHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum Role {
+  SENIOR
+  HELPER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  name        String
+  phone       String?
+  avatarUrl   String?
+  role        Role          @default(SENIOR)
+  timezone    String?
+  language    String        @default("en")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  helpRequests HelpRequest[]
+  techHelper  TechHelper?
+  feedbacks   Feedback[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model HelpRequest {
+  id          String        @id @default(cuid())
+  seniorId    String
+  category    TechCategory
+  description String
+  urgency     Urgency       @default(MEDIUM)
+  status      RequestStatus @default(PENDING)
+  deviceType  String?
+  osVersion   String?
+  screenshots String[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  senior   User          @relation(fields: [seniorId], references: [id], onDelete: Cascade)
+  sessions HelpSession[]
+
+  @@index([seniorId])
+  @@index([status])
+  @@index([category])
+  @@index([urgency])
+  @@index([seniorId, status])
+  @@index([createdAt(sort: Desc)])
+}
+
+model TechHelper {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  skills       TechCategory[]
+  rating       Float         @default(0)
+  reviewCount  Int           @default(0)
+  available    Boolean       @default(true)
+  bio          String?
+  experience   Int?          // years
+  languages    String[]
+  maxSessions  Int           @default(5) // per week
+  verified     Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions HelpSession[]
+
+  @@index([available])
+  @@index([rating(sort: Desc)])
+  @@index([available, rating(sort: Desc)])
+}
+
+model HelpSession {
+  id         String   @id @default(cuid())
+  requestId  String
+  helperId   String
+  startTime  DateTime
+  endTime    DateTime?
+  duration   Int?     // minutes
+  resolved   Boolean  @default(false)
+  notes      String?
+  rating     Int?     // 1-5
+  recordingUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  request  HelpRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  helper   TechHelper  @relation(fields: [helperId], references: [id])
+  feedback Feedback?
+
+  @@index([requestId])
+  @@index([helperId])
+  @@index([startTime(sort: Desc)])
+  @@index([resolved])
+}
+
+model Tutorial {
+  id          String       @id @default(cuid())
+  title       String
+  category    TechCategory
+  content     String
+  difficulty  Difficulty
+  videoUrl    String?
+  imageUrl    String?
+  steps       Json?
+  estimatedTime Int?       // minutes
+  viewCount   Int          @default(0)
+  helpful     Int          @default(0)
+  notHelpful  Int          @default(0)
+  published   Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([category])
+  @@index([difficulty])
+  @@index([category, difficulty])
+  @@index([viewCount(sort: Desc)])
+  @@index([title])
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String   @unique
+  rating    Int      // 1-5
+  comment   String?
+  helpful   Boolean  @default(true)
+  wouldRecommend Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session HelpSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([rating])
+}

@@ -1,0 +1,144 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum EmotionType {
+  JOY
+  FEAR
+  ANXIETY
+  PEACE
+  CONFUSION
+  EXCITEMENT
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  avatar    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dreams     Dream[]
+  patterns   DreamPattern[]
+  tags       Tag[]
+  dreamGoals DreamGoal[]
+
+  @@index([email])
+}
+
+model Dream {
+  id          String      @id @default(cuid())
+  title       String
+  description String      @db.Text
+  vividness   Int         @default(5) // 1-10 scale
+  lucid       Boolean     @default(false)
+  emotions    EmotionType[]
+  themes      String[]
+  recurrence  Int         @default(1) // how many times this dream recurred
+  date        DateTime    @default(now())
+  sleepQuality Int?       // 1-10 scale
+  notes       String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userId   String
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags     DreamTag[]
+  patterns DreamPatternDream[]
+
+  @@index([userId])
+  @@index([date])
+  @@index([lucid])
+  @@index([userId, date])
+}
+
+model DreamPattern {
+  id        String   @id @default(cuid())
+  type      String   // e.g., "recurring symbol", "emotional pattern", "theme cluster"
+  name      String
+  frequency Int      @default(1)
+  meaning   String?  @db.Text
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dreams DreamPatternDream[]
+
+  @@index([userId])
+  @@index([type])
+  @@unique([userId, name, type])
+}
+
+model DreamPatternDream {
+  id        String @id @default(cuid())
+  dreamId   String
+  patternId String
+
+  dream   Dream        @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  pattern DreamPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+
+  @@unique([dreamId, patternId])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  color     String?  @default("#6366f1")
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dreams DreamTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model DreamTag {
+  id      String @id @default(cuid())
+  dreamId String
+  tagId   String
+
+  dream Dream @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([dreamId, tagId])
+}
+
+model DreamGoal {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  targetDate  DateTime?
+  achieved    Boolean  @default(false)
+  achievedAt  DateTime?
+  category    String?  // e.g., "lucid dreaming", "recurring dream resolution"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([achieved])
+}

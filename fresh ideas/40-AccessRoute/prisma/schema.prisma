@@ -1,0 +1,182 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum MobilityType {
+  WHEELCHAIR_MANUAL
+  WHEELCHAIR_ELECTRIC
+  WALKER
+  CANE
+  CRUTCHES
+  STROLLER
+  SCOOTER
+  VISUAL_IMPAIRMENT
+  NONE
+}
+
+enum AccessPointType {
+  RAMP
+  ELEVATOR
+  CURB_CUT
+  TACTILE_PAVING
+  ACCESSIBLE_CROSSING
+  ACCESSIBLE_ENTRANCE
+  ACCESSIBLE_RESTROOM
+  ACCESSIBLE_PARKING
+}
+
+enum ObstacleType {
+  STAIRS
+  STEEP_SLOPE
+  NARROW_PATH
+  BROKEN_SIDEWALK
+  NO_CURB_CUT
+  CONSTRUCTION
+  GAP
+  UNEVEN_SURFACE
+  COBBLESTONE
+  GRAVEL
+}
+
+enum ObstacleStatus {
+  REPORTED
+  CONFIRMED
+  IN_PROGRESS
+  RESOLVED
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  name                String
+  mobilityType        MobilityType        @default(NONE)
+  needs               String[]
+  routes              Route[]
+  accessibilityPoints AccessibilityPoint[]
+  obstacles           Obstacle[]
+  venueReviews        VenueReview[]
+  communityReports    CommunityReport[]
+  savedRoutes         SavedRoute[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+}
+
+model Route {
+  id                 String      @id @default(cuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startLat           Float
+  startLng           Float
+  endLat             Float
+  endLng             Float
+  accessibilityScore Float
+  distance           Float
+  estimatedMins      Int
+  waypoints          Json
+  avoidSteps         Boolean     @default(true)
+  avoidSteep         Boolean     @default(false)
+  requireElevator    Boolean     @default(false)
+  savedRoutes        SavedRoute[]
+  createdAt          DateTime    @default(now())
+}
+
+model AccessibilityPoint {
+  id            String          @id @default(cuid())
+  lat           Float
+  lng           Float
+  type          AccessPointType
+  description   String?
+  rating        Float?
+  photos        String[]
+  reportedById  String
+  reportedBy    User            @relation(fields: [reportedById], references: [id])
+  verifiedCount Int             @default(0)
+  lastVerified  DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Obstacle {
+  id             String         @id @default(cuid())
+  lat            Float
+  lng            Float
+  type           ObstacleType
+  description    String
+  severity       Int
+  temporaryUntil DateTime?
+  reportedById   String
+  reportedBy     User           @relation(fields: [reportedById], references: [id])
+  verifiedCount  Int            @default(0)
+  status         ObstacleStatus @default(REPORTED)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Venue {
+  id                     String        @id @default(cuid())
+  name                   String
+  address                String
+  lat                    Float
+  lng                    Float
+  overallScore           Float?
+  hasRamp                Boolean       @default(false)
+  hasElevator            Boolean       @default(false)
+  hasAccessibleRestroom  Boolean       @default(false)
+  hasAccessibleParking   Boolean       @default(false)
+  doorWidthInches        Float?
+  notes                  String[]
+  reviews                VenueReview[]
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+}
+
+model VenueReview {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venueId      String
+  venue        Venue        @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String?
+  mobilityType MobilityType
+  visitedAt    DateTime
+  photos       String[]
+  createdAt    DateTime     @default(now())
+}
+
+model CommunityReport {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lat         Float
+  lng         Float
+  type        String
+  description String
+  photos      String[]
+  resolved    Boolean  @default(false)
+  resolvedAt  DateTime?
+  upvotes     Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model SavedRoute {
+  id         String  @id @default(cuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routeId    String
+  route      Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  name       String
+  isFavorite Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, routeId])
+}

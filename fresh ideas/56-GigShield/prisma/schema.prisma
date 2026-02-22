@@ -1,0 +1,173 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum GigPlatform {
+  UBER
+  LYFT
+  DOORDASH
+  INSTACART
+  FIVERR
+  UPWORK
+  OTHER
+}
+
+enum ClaimType {
+  WAGE_THEFT
+  DEACTIVATION
+  INJURY
+  EXPENSE
+  DISCRIMINATION
+  OTHER
+}
+
+enum ClaimStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  RESOLVED
+}
+
+enum RightCategory {
+  MINIMUM_WAGE
+  BENEFITS
+  SAFETY
+  DEACTIVATION_PROTECTION
+  EXPENSE_REIMBURSEMENT
+  TRANSPARENCY
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  avatar    String?
+  city      String?
+  state     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gigProfiles    GigProfile[]
+  incomeLogs     IncomeLog[]
+  claims         Claim[]
+  insurancePlans InsurancePlan[]
+
+  @@index([email])
+  @@index([city, state])
+}
+
+model GigProfile {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     GigPlatform
+  role         String
+  startDate    DateTime?
+  earnings     Float       @default(0)
+  hoursPerWeek Float       @default(0)
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  incomeLogs IncomeLog[]
+
+  @@unique([userId, platform])
+  @@index([platform])
+  @@index([active])
+}
+
+model IncomeLog {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gigProfileId String
+  gigProfile   GigProfile  @relation(fields: [gigProfileId], references: [id], onDelete: Cascade)
+  date         DateTime
+  amount       Float
+  tips         Float       @default(0)
+  expenses     Float       @default(0)
+  platform     GigPlatform
+  hours        Float
+  trips        Int?
+  mileage      Float?
+  notes        String?
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
+  @@index([gigProfileId])
+  @@index([date])
+  @@index([platform])
+  @@index([userId, date])
+}
+
+model Right {
+  id           String        @id @default(cuid())
+  jurisdiction String
+  state        String?
+  city         String?
+  category     RightCategory
+  title        String
+  description  String
+  source       String?
+  sourceUrl    String?
+  effectiveDate DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([jurisdiction])
+  @@index([category])
+  @@index([state])
+  @@index([jurisdiction, category])
+}
+
+model Claim {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        ClaimType
+  platform    GigPlatform?
+  amount      Float?
+  description String
+  evidence    String?
+  status      ClaimStatus @default(DRAFT)
+  submittedAt DateTime?
+  resolvedAt  DateTime?
+  resolution  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([platform])
+  @@index([createdAt])
+}
+
+model InsurancePlan {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planName     String
+  provider     String
+  type         String
+  premium      Float
+  deductible   Float?
+  coverage     String?
+  startDate    DateTime
+  endDate      DateTime?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+  @@index([active])
+  @@index([type])
+}

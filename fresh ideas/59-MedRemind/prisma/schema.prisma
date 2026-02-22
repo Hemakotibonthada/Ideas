@@ -1,0 +1,183 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Frequency {
+  DAILY
+  TWICE_DAILY
+  WEEKLY
+  AS_NEEDED
+  MONTHLY
+}
+
+enum MedicationForm {
+  TABLET
+  CAPSULE
+  LIQUID
+  INJECTION
+  TOPICAL
+  INHALER
+  PATCH
+  DROPS
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  phone       String?
+  avatar      String?
+  dateOfBirth DateTime?
+  timezone    String   @default("UTC")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  medications   Medication[]
+  reminders     Reminder[]
+  adherences    Adherence[]
+  prescriptions Prescription[]
+
+  @@index([email])
+}
+
+model Medication {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  genericName String?
+  dosage      String
+  unit        String?
+  form        MedicationForm?
+  frequency   Frequency
+  instructions String?
+  purpose     String?
+  sideEffects String?
+  color       String?
+  imageUrl    String?
+  startDate   DateTime
+  endDate     DateTime?
+  refillDate  DateTime?
+  refillCount Int            @default(0)
+  pillsLeft   Int?
+  active      Boolean        @default(true)
+  pharmacyId  String?
+  pharmacy    Pharmacy?      @relation(fields: [pharmacyId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  reminders    Reminder[]
+  adherences   Adherence[]
+  prescriptions Prescription[]
+
+  @@index([userId])
+  @@index([active])
+  @@index([frequency])
+  @@index([refillDate])
+  @@index([userId, active])
+  @@index([name])
+}
+
+model Reminder {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  time         DateTime
+  taken        Boolean    @default(false)
+  takenAt      DateTime?
+  skipped      Boolean    @default(false)
+  skipReason   String?
+  snoozedUntil DateTime?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([medicationId])
+  @@index([time])
+  @@index([taken])
+  @@index([userId, time])
+  @@index([medicationId, time])
+}
+
+model Adherence {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  date         DateTime
+  totalDoses   Int        @default(0)
+  takenDoses   Int        @default(0)
+  missedDoses  Int        @default(0)
+  adherenceRate Float     @default(0)
+  streak       Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@unique([medicationId, date])
+  @@index([userId])
+  @@index([medicationId])
+  @@index([date])
+  @@index([adherenceRate])
+  @@index([userId, date])
+}
+
+model Pharmacy {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  state     String
+  zipCode   String
+  phone     String?
+  fax       String?
+  email     String?
+  hours     String?
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medications   Medication[]
+  prescriptions Prescription[]
+
+  @@index([name])
+  @@index([city, state])
+  @@index([zipCode])
+  @@index([latitude, longitude])
+}
+
+model Prescription {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicationId  String
+  medication    Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  pharmacyId    String?
+  pharmacy      Pharmacy?  @relation(fields: [pharmacyId], references: [id], onDelete: SetNull)
+  prescriber    String
+  prescriberNPI String?
+  rxNumber      String?
+  quantity      Int?
+  refills       Int        @default(0)
+  refillsUsed   Int        @default(0)
+  issuedDate    DateTime
+  expiryDate    DateTime?
+  notes         String?
+  imageUrl      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([medicationId])
+  @@index([pharmacyId])
+  @@index([rxNumber])
+  @@index([expiryDate])
+}

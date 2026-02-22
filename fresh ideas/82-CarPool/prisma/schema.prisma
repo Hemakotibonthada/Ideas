@@ -1,0 +1,179 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum RideStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  ELECTRIC
+  HYBRID
+}
+
+enum MatchStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum Role {
+  RIDER
+  DRIVER
+  BOTH
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  phone         String?
+  avatar        String?
+  role          Role      @default(BOTH)
+  verified      Boolean   @default(false)
+  rating        Float     @default(5.0)
+  totalRides    Int       @default(0)
+  co2Saved      Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  routes        Route[]
+  vehicles      Vehicle[]
+  driverMatches Match[]   @relation("Driver")
+  riderMatches  Match[]   @relation("Rider")
+  reviewsGiven  Review[]  @relation("ReviewAuthor")
+  reviewsReceived Review[] @relation("ReviewTarget")
+
+  @@index([email])
+  @@index([rating])
+}
+
+model Route {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startLat      Float
+  startLng      Float
+  startAddress  String?
+  endLat        Float
+  endLng        Float
+  endAddress    String?
+  departureTime String
+  days          DayOfWeek[]
+  isDriver      Boolean   @default(false)
+  tolerance     Float     @default(1.0)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  matches       Match[]
+
+  @@index([userId])
+  @@index([startLat, startLng])
+  @@index([endLat, endLng])
+  @@index([active])
+}
+
+model Match {
+  id         String      @id @default(cuid())
+  driverId   String
+  driver     User        @relation("Driver", fields: [driverId], references: [id], onDelete: Cascade)
+  riderId    String
+  rider      User        @relation("Rider", fields: [riderId], references: [id], onDelete: Cascade)
+  routeId    String
+  route      Route       @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  status     MatchStatus @default(PENDING)
+  savings    Float       @default(0)
+  detour     Float       @default(0)
+  overlap    Float       @default(0)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  rides      Ride[]
+
+  @@unique([driverId, riderId, routeId])
+  @@index([status])
+}
+
+model Ride {
+  id          String     @id @default(cuid())
+  matchId     String
+  match       Match      @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  date        DateTime
+  status      RideStatus @default(SCHEDULED)
+  pickupTime  DateTime?
+  dropoffTime DateTime?
+  pickupLat   Float?
+  pickupLng   Float?
+  fare        Float?
+  distance    Float?
+  co2Saved    Float?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([matchId])
+  @@index([date])
+  @@index([status])
+}
+
+model Vehicle {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  make         String
+  model        String
+  year         Int
+  color        String?
+  licensePlate String?
+  seats        Int      @default(4)
+  fuelType     FuelType
+  mpg          Float?
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  authorId   String
+  author     User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  targetId   String
+  target     User     @relation("ReviewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?
+  punctuality Int?
+  cleanliness Int?
+  safety      Int?
+  createdAt  DateTime @default(now())
+
+  @@unique([authorId, targetId])
+  @@index([targetId])
+  @@index([rating])
+}

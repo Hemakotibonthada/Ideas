@@ -1,0 +1,187 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum ClassCategory {
+  YOGA
+  COOKING
+  ART
+  MUSIC
+  DANCE
+  FITNESS
+  CODING
+  LANGUAGE
+  CRAFTS
+  PHOTOGRAPHY
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  WAITLISTED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum ClassStatus {
+  DRAFT
+  PUBLISHED
+  FULL
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  STUDIO_OWNER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  password     String
+  role         Role         @default(STUDENT)
+  avatar       String?
+  phone        String?
+  bio          String?
+  interests    ClassCategory[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  enrollments  Enrollment[]
+  instructor   Instructor?
+
+  @@index([email])
+}
+
+model Class {
+  id           String        @id @default(cuid())
+  title        String
+  instructorId String
+  instructor   Instructor    @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  studioId     String?
+  studio       Studio?       @relation(fields: [studioId], references: [id], onDelete: SetNull)
+  category     ClassCategory
+  description  String
+  requirements String?
+  date         DateTime
+  time         String
+  duration     Int
+  location     String
+  address      String?
+  lat          Float?
+  lng          Float?
+  isOnline     Boolean       @default(false)
+  meetingUrl   String?
+  spots        Int
+  spotsLeft    Int
+  price        Float
+  currency     String        @default("USD")
+  image        String?
+  tags         String[]
+  status       ClassStatus   @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  enrollments  Enrollment[]
+
+  @@index([instructorId])
+  @@index([category])
+  @@index([date])
+  @@index([status])
+  @@index([studioId])
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classId     String
+  classItem   Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  status      EnrollmentStatus @default(ENROLLED)
+  enrolledAt  DateTime         @default(now())
+  cancelledAt DateTime?
+  attended    Boolean          @default(false)
+  paymentId   String?
+  amount      Float?
+  review      Review?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([userId, classId])
+  @@index([userId])
+  @@index([classId])
+  @@index([status])
+}
+
+model Instructor {
+  id          String        @id @default(cuid())
+  userId      String        @unique
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio         String
+  specialties ClassCategory[]
+  rating      Float         @default(0)
+  totalReviews Int          @default(0)
+  experience  Int?
+  certifications String[]
+  website     String?
+  socialMedia Json?
+  verified    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  classes     Class[]
+
+  @@index([rating])
+  @@index([verified])
+}
+
+model Review {
+  id           String     @id @default(cuid())
+  enrollmentId String     @unique
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  rating       Int
+  comment      String?
+  wouldRepeat  Boolean?
+  difficulty   Int?
+  funLevel     Int?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([rating])
+}
+
+model Studio {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  city        String
+  state       String?
+  country     String   @default("US")
+  lat         Float?
+  lng         Float?
+  phone       String?
+  email       String?
+  website     String?
+  image       String?
+  amenities   String[]
+  hours       Json?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  classes     Class[]
+
+  @@index([city])
+  @@index([name])
+}

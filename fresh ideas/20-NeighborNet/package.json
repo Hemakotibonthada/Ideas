@@ -1,0 +1,16 @@
+{
+  "name": "neighbornet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hyperlocal community platform — borrow tools, share skills, organize events",
+  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "lint": "next lint" },
+  "dependencies": {
+    "next": "14.0.4", "react": "^18.2.0", "react-dom": "^18.2.0",
+    "@prisma/client": "^5.7.0", "next-auth": "^4.24.5", "stripe": "^14.11.0",
+    "zod": "^3.22.4", "tailwindcss": "^3.4.0", "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32", "typescript": "^5.3.3", "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0", "@types/react-dom": "^18.2.0",
+    "lucide-react": "^0.294.0", "recharts": "^2.10.3"
+  },
+  "devDependencies": { "prisma": "^5.7.0", "eslint": "^8.55.0", "eslint-config-next": "14.0.4" }
+}

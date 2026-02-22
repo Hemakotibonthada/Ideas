@@ -1,0 +1,163 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum Difficulty {
+  EASY
+  MODERATE
+  HARD
+  EXPERT
+}
+
+enum TrailConditionType {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  CLOSED
+  MUDDY
+  ICY
+  FLOODED
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reviews        Review[]
+  favoriteTrails FavoriteTrail[]
+  hikeLogs       HikeLog[]
+  conditions     TrailCondition[]
+
+  @@index([email])
+}
+
+model Trail {
+  id          String     @id @default(cuid())
+  name        String
+  location    String     // city, state/region
+  lat         Float
+  lng         Float
+  length      Float      // miles or km
+  elevation   Float      // elevation gain in feet or meters
+  difficulty  Difficulty
+  rating      Float      @default(0) // average rating
+  reviewCount Int        @default(0)
+  description String?
+  features    String[]   // waterfall, lake, viewpoint, etc.
+  dogFriendly Boolean    @default(false)
+  imageUrl    String?
+  mapUrl      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  conditions     TrailCondition[]
+  reviews        Review[]
+  favoriteTrails FavoriteTrail[]
+  hikeLogs       HikeLog[]
+
+  @@index([lat, lng])
+  @@index([difficulty])
+  @@index([rating])
+  @@index([location])
+  @@index([length])
+  @@index([dogFriendly])
+}
+
+model TrailCondition {
+  id         String             @id @default(cuid())
+  date       DateTime           @default(now())
+  condition  TrailConditionType
+  weather    String?            // sunny, rainy, snowy, etc.
+  crowdLevel String?            // LOW, MEDIUM, HIGH
+  notes      String?
+  photos     String[]
+  createdAt  DateTime           @default(now())
+
+  trail      Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailId    String
+  reporter   User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId String
+
+  @@index([trailId])
+  @@index([reporterId])
+  @@index([date])
+  @@index([condition])
+  @@index([trailId, date])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5 stars
+  comment   String?
+  photos    String[]
+  date      DateTime @default(now())
+  helpful   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trail      Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailId    String
+  reviewer   User   @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewerId String
+
+  @@unique([trailId, reviewerId])
+  @@index([trailId])
+  @@index([reviewerId])
+  @@index([rating])
+  @@index([date])
+}
+
+model FavoriteTrail {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  trail   Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailId String
+
+  @@unique([userId, trailId])
+  @@index([userId])
+  @@index([trailId])
+}
+
+model HikeLog {
+  id          String   @id @default(cuid())
+  date        DateTime
+  duration    Int      // minutes
+  distance    Float?   // actual distance covered
+  elevation   Float?   // actual elevation gained
+  calories    Int?
+  pace        Float?   // min/mile or min/km
+  companions  Int      @default(0) // number of people hiked with
+  weather     String?
+  notes       String?
+  photos      String[]
+  rating      Int?     // personal rating 1-5
+  createdAt   DateTime @default(now())
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  trail   Trail  @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  trailId String
+
+  @@index([userId])
+  @@index([trailId])
+  @@index([date])
+  @@index([userId, date])
+}

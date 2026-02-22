@@ -1,0 +1,144 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum SoundCategory {
+  NATURE
+  URBAN
+  MUSIC
+  WHITE_NOISE
+  BINAURAL
+  ANIMAL
+}
+
+enum Mood {
+  FOCUS
+  RELAX
+  SLEEP
+  MEDITATE
+  ENERGIZE
+  STUDY
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  premium   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  soundMixes   SoundMix[]
+  presets      Preset[]
+  favorites    FavoriteMix[]
+  playSessions PlaySession[]
+
+  @@index([email])
+}
+
+model Sound {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  category    SoundCategory
+  fileUrl     String
+  duration    Int
+  iconUrl     String?
+  premium     Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  mixSounds MixSound[]
+
+  @@index([category])
+  @@index([premium])
+  @@index([name])
+}
+
+model SoundMix {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duration  Int?
+  isPublic  Boolean  @default(false)
+  plays     Int      @default(0)
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sounds       MixSound[]
+  presets      Preset[]
+  favorites    FavoriteMix[]
+  playSessions PlaySession[]
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([plays])
+  @@index([createdAt])
+}
+
+model MixSound {
+  id       String   @id @default(cuid())
+  mixId    String
+  mix      SoundMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  soundId  String
+  sound    Sound    @relation(fields: [soundId], references: [id], onDelete: Cascade)
+  volume   Float    @default(0.5)
+  pan      Float    @default(0)
+
+  @@unique([mixId, soundId])
+  @@index([mixId])
+  @@index([soundId])
+}
+
+model Preset {
+  id        String   @id @default(cuid())
+  name      String
+  mood      Mood
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mixId     String
+  mix       SoundMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([mood])
+  @@index([mixId])
+}
+
+model FavoriteMix {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mixId     String
+  mix       SoundMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mixId])
+  @@index([userId])
+}
+
+model PlaySession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mixId     String
+  mix       SoundMix @relation(fields: [mixId], references: [id], onDelete: Cascade)
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  duration  Int?
+  mood      Mood?
+
+  @@index([userId])
+  @@index([mixId])
+  @@index([startedAt])
+  @@index([userId, startedAt])
+}

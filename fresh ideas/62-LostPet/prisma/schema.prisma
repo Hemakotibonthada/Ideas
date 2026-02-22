@@ -1,0 +1,156 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum PetSpecies {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  HAMSTER
+  REPTILE
+  OTHER
+}
+
+enum PetSize {
+  TINY
+  SMALL
+  MEDIUM
+  LARGE
+  EXTRA_LARGE
+}
+
+enum ReportStatus {
+  ACTIVE
+  FOUND
+  CLOSED
+}
+
+enum AlertType {
+  EMAIL
+  SMS
+  PUSH
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String
+  phone       String?
+  avatarUrl   String?
+  lat         Float?
+  lng         Float?
+  alertRadius Int          @default(10) // km
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  pets        Pet[]
+  sightings   Sighting[]
+  alerts      Alert[]
+
+  @@index([email])
+  @@index([lat, lng])
+}
+
+model Pet {
+  id          String     @id @default(cuid())
+  ownerId     String
+  name        String
+  species     PetSpecies
+  breed       String?
+  color       String
+  size        PetSize    @default(MEDIUM)
+  weight      Float?
+  age         Int?
+  imageUrl    String?
+  microchipId String?    @unique
+  description String?
+  vaccinated  Boolean    @default(false)
+  neutered    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  lostReports LostReport[]
+
+  @@index([ownerId])
+  @@index([species])
+  @@index([microchipId])
+  @@index([species, breed])
+}
+
+model LostReport {
+  id           String       @id @default(cuid())
+  petId        String
+  dateLost     DateTime
+  lastSeenLat  Float
+  lastSeenLng  Float
+  lastSeenAddr String?
+  description  String
+  status       ReportStatus @default(ACTIVE)
+  reward       Decimal?     @db.Decimal(10, 2)
+  contactPhone String?
+  contactEmail String?
+  foundDate    DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  pet       Pet        @relation(fields: [petId], references: [id], onDelete: Cascade)
+  sightings Sighting[]
+  alerts    Alert[]
+
+  @@index([petId])
+  @@index([status])
+  @@index([lastSeenLat, lastSeenLng])
+  @@index([dateLost(sort: Desc)])
+  @@index([status, dateLost(sort: Desc)])
+}
+
+model Sighting {
+  id         String   @id @default(cuid())
+  reportId   String
+  reporterId String
+  lat        Float
+  lng        Float
+  address    String?
+  timestamp  DateTime @default(now())
+  photo      String?
+  notes      String?
+  confidence Int      @default(50) // 0-100
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  report   LostReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reporter User       @relation(fields: [reporterId], references: [id])
+
+  @@index([reportId])
+  @@index([reporterId])
+  @@index([lat, lng])
+  @@index([timestamp(sort: Desc)])
+}
+
+model Alert {
+  id        String    @id @default(cuid())
+  userId    String
+  reportId  String
+  type      AlertType @default(PUSH)
+  message   String
+  read      Boolean   @default(false)
+  sentAt    DateTime  @default(now())
+  readAt    DateTime?
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report LostReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([reportId])
+  @@index([sentAt(sort: Desc)])
+}

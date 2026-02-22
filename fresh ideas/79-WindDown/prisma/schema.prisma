@@ -1,0 +1,120 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum ActivityCategory {
+  MEDITATION
+  READING
+  STRETCHING
+  JOURNALING
+  BREATHING
+  SKINCARE
+  MUSIC
+  TEA
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  routines  Routine[]
+  sleepLogs SleepLog[]
+
+  @@index([email])
+}
+
+model Routine {
+  id        String   @id @default(cuid())
+  name      String
+  startTime String   // "HH:mm" format - when routine begins
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  activities Activity[]
+  logs       RoutineLog[]
+
+  @@index([userId])
+  @@index([active])
+  @@index([userId, active])
+}
+
+model Activity {
+  id          String           @id @default(cuid())
+  name        String
+  category    ActivityCategory
+  duration    Int              // minutes
+  description String?
+  order       Int              // sequence in routine
+  optional    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  routine   Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  routineId String
+
+  @@index([routineId])
+  @@index([category])
+  @@index([routineId, order])
+}
+
+model RoutineLog {
+  id           String   @id @default(cuid())
+  date         DateTime @db.Date
+  completed    Boolean  @default(false)
+  sleepQuality Int?     // 1-10 scale
+  skipped      String[] // activity IDs that were skipped
+  startedAt    DateTime?
+  completedAt  DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  routine   Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  routineId String
+
+  @@unique([routineId, date])
+  @@index([routineId])
+  @@index([date])
+  @@index([completed])
+}
+
+model SleepLog {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  bedtime   DateTime
+  wakeTime  DateTime
+  quality   Int      // 1-10 scale
+  duration  Float    // hours
+  deepSleep Float?   // hours
+  remSleep  Float?   // hours
+  wakeUps   Int      @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([quality])
+  @@index([userId, date])
+}

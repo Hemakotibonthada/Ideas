@@ -1,0 +1,143 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum Device {
+  COMPUTER
+  PHONE
+  TABLET
+  TV
+  EREADER
+}
+
+enum ExerciseType {
+  PALMING
+  BLINKING
+  FOCUS_SHIFT
+  FIGURE_EIGHT
+  DISTANCE_GAZE
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  avatar         String?
+  dailyGoalHours Float?   // max screen time goal per day
+  timezone       String   @default("UTC")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  screenSessions ScreenSession[]
+  breakReminders BreakReminder[]
+  exerciseLogs   ExerciseLog[]
+  visionLogs     VisionLog[]
+
+  @@index([email])
+}
+
+model ScreenSession {
+  id        String   @id @default(cuid())
+  startTime DateTime
+  endTime   DateTime?
+  device    Device
+  breaks    Int      @default(0) // number of breaks taken
+  app       String?  // application name
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([device])
+  @@index([startTime])
+  @@index([userId, startTime])
+}
+
+model BreakReminder {
+  id              String       @id @default(cuid())
+  intervalMinutes Int          @default(20) // e.g., 20-20-20 rule
+  duration        Int          @default(20) // break duration in seconds
+  exerciseType    ExerciseType @default(DISTANCE_GAZE)
+  enabled         Boolean      @default(true)
+  sound           Boolean      @default(true)
+  startHour       Int          @default(9)  // start reminding at 9 AM
+  endHour         Int          @default(17) // stop reminding at 5 PM
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([enabled])
+}
+
+model EyeExercise {
+  id           String       @id @default(cuid())
+  name         String       @unique
+  type         ExerciseType
+  description  String
+  duration     Int          // seconds
+  instructions Json         // step-by-step instructions as array
+  imageUrl     String?
+  videoUrl     String?
+  difficulty   String       @default("EASY") // EASY, MEDIUM, HARD
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  exerciseLogs ExerciseLog[]
+
+  @@index([type])
+  @@index([difficulty])
+}
+
+model ExerciseLog {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  completed Boolean  @default(true)
+  duration  Int?     // actual duration in seconds
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  exercise   EyeExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  exerciseId String
+
+  @@index([userId])
+  @@index([exerciseId])
+  @@index([date])
+  @@index([userId, date])
+}
+
+model VisionLog {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  strain    Int      // 1-10 scale
+  dryness   Int      // 1-10 scale
+  headache  Boolean  @default(false)
+  bluriness Int?     // 1-10 scale
+  redness   Int?     // 1-10 scale
+  screenTime Float?  // hours
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([strain])
+}

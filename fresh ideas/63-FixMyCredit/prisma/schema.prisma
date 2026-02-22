@@ -1,0 +1,172 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum FactorType {
+  PAYMENT_HISTORY
+  UTILIZATION
+  AGE
+  INQUIRIES
+  MIX
+  DEROGATORY
+}
+
+enum FactorImpact {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FactorStatus {
+  GOOD
+  FAIR
+  NEEDS_WORK
+  CRITICAL
+}
+
+enum Bureau {
+  EQUIFAX
+  EXPERIAN
+  TRANSUNION
+}
+
+enum DisputeStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  phone          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  creditProfiles CreditProfile[]
+
+  @@index([email])
+}
+
+model CreditProfile {
+  id           String          @id @default(cuid())
+  userId       String
+  score        Int
+  bureau       Bureau
+  lastPull     DateTime
+  goalScore    Int?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  factors       CreditFactor[]
+  actionItems   ActionItem[]
+  scoreHistory  ScoreHistory[]
+  disputes      Dispute[]
+
+  @@unique([userId, bureau])
+  @@index([userId])
+  @@index([score])
+  @@index([bureau])
+}
+
+model CreditFactor {
+  id             String       @id @default(cuid())
+  profileId      String
+  type           FactorType
+  impact         FactorImpact
+  status         FactorStatus
+  recommendation String
+  details        String?
+  weight         Float        @default(0)
+  currentValue   String?
+  idealValue     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  profile CreditProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([type])
+  @@index([profileId, type])
+  @@index([status])
+}
+
+model ActionItem {
+  id             String   @id @default(cuid())
+  profileId      String
+  description    String
+  priority       Priority
+  completed      Boolean  @default(false)
+  completedAt    DateTime?
+  impactEstimate Int      // estimated score improvement
+  dueDate        DateTime?
+  notes          String?
+  category       FactorType?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  profile CreditProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([completed])
+  @@index([priority])
+  @@index([profileId, completed])
+}
+
+model ScoreHistory {
+  id        String   @id @default(cuid())
+  profileId String
+  score     Int
+  date      DateTime
+  change    Int      @default(0) // delta from previous
+  notes     String?
+  createdAt DateTime @default(now())
+
+  profile CreditProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([date(sort: Desc)])
+  @@index([profileId, date(sort: Desc)])
+}
+
+model Dispute {
+  id          String        @id @default(cuid())
+  profileId   String
+  bureau      Bureau
+  accountName String
+  reason      String
+  status      DisputeStatus @default(DRAFT)
+  letterText  String?
+  filedDate   DateTime?
+  resolvedDate DateTime?
+  outcome     String?
+  documents   String[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  profile CreditProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([status])
+  @@index([bureau])
+  @@index([profileId, status])
+}

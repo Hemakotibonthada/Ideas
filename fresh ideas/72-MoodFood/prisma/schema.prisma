@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum Mood {
+  HAPPY
+  SAD
+  ANXIOUS
+  TIRED
+  ENERGETIC
+  STRESSED
+  CALM
+  ANGRY
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  moodLogs MoodLog[]
+  mealLogs MealLog[]
+
+  @@index([email])
+}
+
+model MoodLog {
+  id        String   @id @default(cuid())
+  mood      Mood
+  energy    Int      // 1-10 scale
+  stress    Int      // 1-10 scale
+  notes     String?
+  timestamp DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  recommendations FoodRecommendation[]
+
+  @@index([userId])
+  @@index([mood])
+  @@index([timestamp])
+  @@index([userId, timestamp])
+}
+
+model FoodRecommendation {
+  id       String  @id @default(cuid())
+  reason   String
+  nutrients Json?
+  rating   Float?
+  accepted Boolean @default(false)
+
+  moodLog   MoodLog  @relation(fields: [moodLogId], references: [id], onDelete: Cascade)
+  moodLogId String
+  food      FoodItem @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  foodId    String
+
+  createdAt DateTime @default(now())
+
+  @@index([moodLogId])
+  @@index([foodId])
+}
+
+model FoodItem {
+  id           String  @id @default(cuid())
+  name         String  @unique
+  category     String
+  nutrients    Json    // { calories, protein, carbs, fat, vitamins... }
+  moodBenefits Json    // { serotonin: true, dopamine: true, ... }
+  imageUrl     String?
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  recommendations FoodRecommendation[]
+  mealLogs        MealLog[]
+
+  @@index([category])
+  @@index([name])
+}
+
+model MealLog {
+  id        String   @id @default(cuid())
+  meal      MealType
+  date      DateTime @db.Date
+  moodAfter Mood?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  food   FoodItem @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  foodId String
+
+  @@index([userId])
+  @@index([userId, date])
+  @@index([meal])
+  @@index([date])
+}

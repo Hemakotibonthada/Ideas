@@ -1,0 +1,145 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────────────
+
+enum PlantType {
+  VEGETABLE
+  HERB
+  FRUIT
+  FLOWER
+  SHRUB
+  TREE
+}
+
+enum SunRequirement {
+  FULL_SUN
+  PARTIAL_SUN
+  PARTIAL_SHADE
+  FULL_SHADE
+}
+
+// ── Models ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  avatar    String?
+  zone      String?  // USDA hardiness zone
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gardens Garden[]
+  tasks   Task[]
+
+  @@index([email])
+}
+
+model Garden {
+  id        String         @id @default(cuid())
+  name      String
+  width     Float          // feet or meters
+  length    Float
+  zone      String?        // USDA hardiness zone
+  sunlight  SunRequirement @default(FULL_SUN)
+  soilType  String?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  plots GardenPlot[]
+
+  @@index([userId])
+}
+
+model Plant {
+  id             String         @id @default(cuid())
+  name           String         @unique
+  type           PlantType
+  spacing        Float          // inches between plants
+  sunNeeds       SunRequirement
+  waterNeeds     String         // LOW, MEDIUM, HIGH
+  daysToHarvest  Int?
+  companionsWith String[]       // plant names that grow well together
+  conflictsWith  String[]       // plant names to avoid planting nearby
+  description    String?
+  imageUrl       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  plots    GardenPlot[]
+  calendar PlantingCalendar[]
+
+  @@index([type])
+  @@index([sunNeeds])
+  @@index([name])
+}
+
+model GardenPlot {
+  id          String    @id @default(cuid())
+  row         Int
+  col         Int
+  plantedDate DateTime?
+  harvestDate DateTime?
+  status      String    @default("EMPTY") // EMPTY, PLANTED, GROWING, READY, HARVESTED
+  notes       String?
+
+  garden   Garden @relation(fields: [gardenId], references: [id], onDelete: Cascade)
+  gardenId String
+  plant    Plant? @relation(fields: [plantId], references: [id], onDelete: SetNull)
+  plantId  String?
+
+  @@unique([gardenId, row, col])
+  @@index([gardenId])
+  @@index([plantId])
+  @@index([status])
+}
+
+model PlantingCalendar {
+  id             String @id @default(cuid())
+  zone           String // USDA hardiness zone
+  sowIndoorsDate String // "MM-DD" format
+  transplantDate String
+  directSowDate  String
+  harvestStart   String
+  harvestEnd     String
+  notes          String?
+
+  plant   Plant  @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  plantId String
+
+  @@unique([plantId, zone])
+  @@index([zone])
+  @@index([plantId])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  dueDate     DateTime
+  completed   Boolean  @default(false)
+  recurring   Boolean  @default(false)
+  frequency   String?  // DAILY, WEEKLY, BIWEEKLY, MONTHLY
+  category    String?  // WATERING, FERTILIZING, PRUNING, HARVESTING, PLANTING
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@index([userId])
+  @@index([dueDate])
+  @@index([completed])
+  @@index([userId, completed])
+}

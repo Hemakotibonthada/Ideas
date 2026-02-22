@@ -1,0 +1,170 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum ProductCategory {
+  PRODUCE
+  DAIRY
+  MEAT
+  BAKERY
+  FROZEN
+  BEVERAGES
+  SNACKS
+  HOUSEHOLD
+  PERSONAL_CARE
+  BABY
+  PET
+  PANTRY
+  DELI
+  ORGANIC
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  location        Json?
+  preferredStores String[]
+  householdSize   Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shoppingLists   ShoppingList[]
+  userSavings     UserSaving[]
+}
+
+model Store {
+  id           String       @id @default(cuid())
+  name         String
+  chain        String?
+  address      String
+  lat          Float?
+  lng          Float?
+  openingHours Json?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  storePrices  StorePrice[]
+  coupons      Coupon[]
+}
+
+model Product {
+  id       String          @id @default(cuid())
+  name     String
+  brand    String?
+  category ProductCategory
+  unit     String?
+  imageUrl String?
+  barcode  String?         @unique
+  createdAt DateTime       @default(now())
+
+  storePrices       StorePrice[]
+  shoppingListItems ShoppingListItem[]
+  coupons           Coupon[]
+}
+
+model StorePrice {
+  id          String    @id @default(cuid())
+  storeId     String
+  productId   String
+  price       Float
+  unitPrice   Float?
+  onSale      Boolean   @default(false)
+  saleEndDate DateTime?
+  lastUpdated DateTime  @default(now())
+
+  store        Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceHistory PriceHistory[]
+
+  @@unique([storeId, productId])
+  @@index([storeId])
+  @@index([productId])
+}
+
+model ShoppingList {
+  id             String             @id @default(cuid())
+  userId         String
+  name           String
+  items          Json?
+  totalEstimated Float?
+  optimalStore   String?
+  savings        Float?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listItems      ShoppingListItem[]
+  userSavings    UserSaving[]
+
+  @@index([userId])
+}
+
+model ShoppingListItem {
+  id             String       @id @default(cuid())
+  shoppingListId String
+  productId      String
+  quantity       Int          @default(1)
+  bestPrice      Float?
+  bestStore      String?
+  addedAt        DateTime     @default(now())
+
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([shoppingListId])
+  @@index([productId])
+}
+
+model PriceHistory {
+  id           String     @id @default(cuid())
+  storePriceId String
+  price        Float
+  date         DateTime   @default(now())
+
+  storePrice   StorePrice @relation(fields: [storePriceId], references: [id], onDelete: Cascade)
+
+  @@index([storePriceId])
+  @@index([date])
+}
+
+model Coupon {
+  id         String    @id @default(cuid())
+  storeId    String?
+  productId  String?
+  discount   Float
+  code       String?
+  expiryDate DateTime?
+  used       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  store      Store?    @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  product    Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([productId])
+  @@index([expiryDate])
+}
+
+model UserSaving {
+  id             String       @id @default(cuid())
+  userId         String
+  shoppingListId String?
+  amountSaved    Float
+  date           DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shoppingList   ShoppingList? @relation(fields: [shoppingListId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([date])
+}

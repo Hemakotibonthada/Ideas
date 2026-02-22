@@ -1,0 +1,19 @@
+{
+  "name": "orderbite",
+  "version": "1.0.0",
+  "description": "Restaurant POS, Online Ordering & Delivery Management",
+  "private": true,
+  "scripts": { "dev": "next dev -p 3009", "build": "next build", "start": "next start", "db:migrate": "prisma migrate dev" },
+  "dependencies": {
+    "@prisma/client": "^5.7.0", "@tanstack/react-query": "^5.17.0", "bcryptjs": "^2.4.3",
+    "chart.js": "^4.4.1", "clsx": "^2.1.0", "date-fns": "^3.2.0", "next": "14.0.4",
+    "next-auth": "^4.24.5", "react": "^18.2.0", "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0", "react-hook-form": "^7.49.3", "react-hot-toast": "^2.4.1",
+    "socket.io": "^4.7.4", "socket.io-client": "^4.7.4", "stripe": "^14.14.0",
+    "qrcode.react": "^3.1.0", "zod": "^3.22.4", "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0", "@types/react": "^18.2.47", "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.33", "prisma": "^5.7.0", "tailwindcss": "^3.4.1", "typescript": "^5.3.3"
+  }
+}

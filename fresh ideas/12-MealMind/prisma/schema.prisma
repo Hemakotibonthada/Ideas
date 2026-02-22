@@ -1,0 +1,152 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum DietType {
+  OMNIVORE
+  VEGETARIAN
+  VEGAN
+  KETO
+  PALEO
+  GLUTEN_FREE
+  HALAL
+  KOSHER
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum FoodCategory {
+  DAIRY
+  PROTEIN
+  VEGETABLE
+  FRUIT
+  GRAIN
+  CONDIMENT
+  BEVERAGE
+  FROZEN
+  SNACK
+  OTHER
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id                  String           @id @default(cuid())
+  email               String           @unique
+  name                String
+  dietaryPreferences  String[]
+  allergies           String[]
+  householdSize       Int              @default(1)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  fridgeInventories   FridgeInventory[]
+  mealPlans           MealPlan[]
+  groceryLists        GroceryList[]
+  nutritionLogs       NutritionLog[]
+}
+
+model FridgeInventory {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     Json
+  photoUrl  String?
+  scannedAt DateTime        @default(now())
+  createdAt DateTime        @default(now())
+
+  ingredients IngredientItem[]
+
+  @@index([userId, scannedAt])
+}
+
+model IngredientItem {
+  id          String         @id @default(cuid())
+  inventoryId String
+  inventory   FridgeInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  name        String
+  quantity    Float
+  unit        String
+  expiresAt   DateTime?
+  category    FoodCategory   @default(OTHER)
+  createdAt   DateTime       @default(now())
+
+  @@index([inventoryId, category])
+}
+
+model Recipe {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  cuisine      String?
+  prepTime     Int      // minutes
+  cookTime     Int      // minutes
+  servings     Int
+  calories     Int?
+  protein      Float?
+  carbs        Float?
+  fat          Float?
+  instructions Json
+  imageUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([cuisine])
+}
+
+model MealPlan {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime @db.Date
+  meals         Json     // Array of { mealType, recipeId, servings }
+  totalCalories Int?
+  totalProtein  Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model GroceryList {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         Json     // Array of { name, quantity, unit, category, checked }
+  estimatedCost Float?
+  completed     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, completed])
+}
+
+model NutritionLog {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             DateTime @db.Date
+  caloriesConsumed Int
+  proteinG         Float
+  carbsG           Float
+  fatG             Float
+  waterMl          Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}

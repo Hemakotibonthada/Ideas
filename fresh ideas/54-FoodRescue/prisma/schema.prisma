@@ -1,0 +1,155 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum FoodCategory {
+  PRODUCE
+  BAKERY
+  DAIRY
+  PREPARED
+  CANNED
+  FROZEN
+}
+
+enum ListingStatus {
+  AVAILABLE
+  CLAIMED
+  PICKED_UP
+  EXPIRED
+  CANCELLED
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  PICKED_UP
+  CANCELLED
+  NO_SHOW
+}
+
+enum DonorType {
+  RESTAURANT
+  GROCERY_STORE
+  BAKERY
+  INDIVIDUAL
+  CATERING
+  FARM
+  OTHER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  avatar    String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  donorProfile DonorProfile?
+  listings     FoodListing[]
+  claims       Claim[]
+  impactLogs   ImpactLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model FoodListing {
+  id            String        @id @default(cuid())
+  donorId       String
+  donor         User          @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  category      FoodCategory
+  quantity      Int
+  unit          String        @default("items")
+  expiryDate    DateTime
+  pickupAddress String
+  pickupCity    String
+  pickupState   String
+  pickupZip     String
+  latitude      Float?
+  longitude     Float?
+  pickupStart   DateTime?
+  pickupEnd     DateTime?
+  imageUrl      String?
+  allergens     String?
+  status        ListingStatus @default(AVAILABLE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  claims    Claim[]
+  impactLog ImpactLog?
+
+  @@index([donorId])
+  @@index([status])
+  @@index([category])
+  @@index([expiryDate])
+  @@index([pickupCity, pickupState])
+  @@index([latitude, longitude])
+  @@index([createdAt])
+}
+
+model Claim {
+  id         String      @id @default(cuid())
+  listingId  String
+  listing    FoodListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  claimerId  String
+  claimer    User        @relation(fields: [claimerId], references: [id], onDelete: Cascade)
+  status     ClaimStatus @default(PENDING)
+  quantity   Int?
+  pickupTime DateTime?
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([listingId])
+  @@index([claimerId])
+  @@index([status])
+  @@unique([listingId, claimerId])
+}
+
+model DonorProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       DonorType
+  orgName    String?
+  address    String
+  city       String
+  state      String
+  zipCode    String
+  phone      String?
+  verified   Boolean  @default(false)
+  verifiedAt DateTime?
+  totalDonations Int  @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([type])
+  @@index([verified])
+  @@index([city, state])
+}
+
+model ImpactLog {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId   String       @unique
+  listing     FoodListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  weightKg    Float?
+  mealsServed Int?
+  co2Saved    Float?
+  date        DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  @@index([userId])
+  @@index([date])
+}

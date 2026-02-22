@@ -1,0 +1,146 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ToolCategory {
+  POWER
+  HAND
+  GARDEN
+  AUTOMOTIVE
+  PLUMBING
+  ELECTRICAL
+}
+
+enum ToolCondition {
+  NEW
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+}
+
+enum LoanStatus {
+  REQUESTED
+  APPROVED
+  ACTIVE
+  RETURNED
+  OVERDUE
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  avatar    String?
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  latitude  Float?
+  longitude Float?
+  rating    Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tools         Tool[]
+  borrowedLoans Loan[]     @relation("Borrower")
+  reviewsGiven  Review[]   @relation("ReviewAuthor")
+  wishList      WishList[]
+
+  @@index([email])
+  @@index([city, state])
+  @@index([latitude, longitude])
+}
+
+model Tool {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  category    ToolCategory
+  brand       String?
+  model       String?
+  condition   ToolCondition @default(GOOD)
+  imageUrl    String?
+  available   Boolean       @default(true)
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  dailyRate   Float?
+  deposit     Float?
+  maxLoanDays Int           @default(7)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  loans    Loan[]
+  wishList WishList[]
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([available])
+  @@index([condition])
+  @@index([name])
+  @@index([category, available])
+}
+
+model Loan {
+  id         String     @id @default(cuid())
+  toolId     String
+  tool       Tool       @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  borrowerId String
+  borrower   User       @relation("Borrower", fields: [borrowerId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  returnDate DateTime
+  actualReturn DateTime?
+  status     LoanStatus @default(REQUESTED)
+  notes      String?
+  fee        Float?
+  deposit    Float?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  reviews Review[]
+
+  @@index([toolId])
+  @@index([borrowerId])
+  @@index([status])
+  @@index([startDate, returnDate])
+  @@index([toolId, status])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  loanId    String
+  loan      Loan     @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?
+  type      String   @default("borrower")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([loanId, authorId])
+  @@index([authorId])
+  @@index([rating])
+}
+
+model WishList {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolId    String?
+  tool      Tool?    @relation(fields: [toolId], references: [id], onDelete: SetNull)
+  toolName  String?
+  category  ToolCategory?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([category])
+}

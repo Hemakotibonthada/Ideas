@@ -1,0 +1,182 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Cuisine {
+  ITALIAN
+  MEXICAN
+  CHINESE
+  JAPANESE
+  INDIAN
+  THAI
+  AMERICAN
+  FRENCH
+  KOREAN
+  MEDITERRANEAN
+}
+
+enum PriceRange {
+  BUDGET
+  MODERATE
+  UPSCALE
+  FINE_DINING
+}
+
+enum Role {
+  USER
+  CRITIC
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id          String        @id @default(cuid())
+  email       String        @unique
+  name        String
+  username    String        @unique
+  avatarUrl   String?
+  bio         String?
+  role        Role          @default(USER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  reviews     DishReview[]
+  collections Collection[]
+  likes       ReviewLike[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Restaurant {
+  id          String     @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  state       String?
+  zipCode     String?
+  lat         Float?
+  lng         Float?
+  cuisine     Cuisine
+  priceRange  PriceRange
+  phone       String?
+  website     String?
+  imageUrl    String?
+  avgRating   Float      @default(0)
+  reviewCount Int        @default(0)
+  verified    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  dishes      Dish[]
+
+  @@index([cuisine])
+  @@index([priceRange])
+  @@index([city])
+  @@index([avgRating(sort: Desc)])
+  @@index([lat, lng])
+  @@index([name])
+}
+
+model Dish {
+  id           String       @id @default(cuid())
+  restaurantId String
+  name         String
+  price        Decimal      @db.Decimal(8, 2)
+  description  String?
+  imageUrl     String?
+  category     String?
+  allergens    String[]
+  spiceLevel   Int?         // 0-5
+  vegetarian   Boolean      @default(false)
+  vegan        Boolean      @default(false)
+  glutenFree   Boolean      @default(false)
+  avgRating    Float        @default(0)
+  reviewCount  Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  restaurant Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  reviews    DishReview[]
+  collections CollectionDish[]
+
+  @@index([restaurantId])
+  @@index([name])
+  @@index([avgRating(sort: Desc)])
+  @@index([restaurantId, avgRating(sort: Desc)])
+}
+
+model DishReview {
+  id         String       @id @default(cuid())
+  dishId     String
+  reviewerId String
+  rating     Int          // 1-5
+  photo      String?
+  comment    String?
+  likes      Int          @default(0)
+  visitDate  DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  dish       Dish         @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  reviewer   User         @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewLikes ReviewLike[]
+
+  @@unique([dishId, reviewerId])
+  @@index([dishId])
+  @@index([reviewerId])
+  @@index([rating])
+  @@index([createdAt(sort: Desc)])
+}
+
+model ReviewLike {
+  id       String @id @default(cuid())
+  reviewId String
+  userId   String
+  createdAt DateTime @default(now())
+
+  review DishReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
+}
+
+model Collection {
+  id        String           @id @default(cuid())
+  userId    String
+  name      String
+  description String?
+  isPublic  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  dishes    CollectionDish[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([isPublic])
+}
+
+model CollectionDish {
+  id           String   @id @default(cuid())
+  collectionId String
+  dishId       String
+  notes        String?
+  addedAt      DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  dish       Dish       @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, dishId])
+  @@index([collectionId])
+  @@index([dishId])
+}

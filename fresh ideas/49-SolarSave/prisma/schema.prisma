@@ -1,0 +1,188 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum RoofType {
+  FLAT
+  GABLE
+  HIP
+  MANSARD
+  SHED
+}
+
+enum QuoteStatus {
+  PENDING
+  RECEIVED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum PropertyStatus {
+  DRAFT
+  ASSESSED
+  QUOTED
+  INSTALLED
+  MONITORING
+}
+
+enum Role {
+  HOMEOWNER
+  INSTALLER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  phone     String?
+  avatar    String?
+  role      Role     @default(HOMEOWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  properties Property[]
+  quotes     Quote[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Property {
+  id             String         @id @default(cuid())
+  address        String
+  city           String
+  state          String
+  zipCode        String
+  country        String         @default("US")
+  lat            Float?
+  lng            Float?
+  roofSize       Float          // sq ft
+  roofAngle      Float          // degrees
+  roofType       RoofType       @default(GABLE)
+  roofAge        Int?           // years
+  shading        Float          @default(0) // 0-100, percentage shaded
+  sunHours       Float?         // avg peak sun hours per day
+  electricBill   Float          // monthly average in USD
+  electricUsage  Float?         // monthly kWh usage
+  utilityProvider String?
+  status         PropertyStatus @default(DRAFT)
+  imageUrl       String?
+  roofImageUrl   String?
+  notes          String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  estimates SolarEstimate[]
+  quotes    Quote[]
+
+  @@index([userId])
+  @@index([zipCode])
+  @@index([status])
+  @@index([userId, status])
+}
+
+model SolarEstimate {
+  id              String   @id @default(cuid())
+  panels          Int      // number of panels
+  panelWattage    Int      @default(400) // watts per panel
+  capacity        Float    // total system capacity in kW
+  annualOutput    Float    // estimated annual kWh
+  monthlySavings  Float    // estimated monthly savings in USD
+  annualSavings   Float    // estimated annual savings in USD
+  totalSavings25y Float?   // 25-year savings estimate
+  paybackPeriod   Float    // payback period in years
+  systemCost      Float    // estimated total cost
+  federalCredit   Float?   // federal tax credit amount
+  stateIncentive  Float?   // state incentive amount
+  netCost         Float?   // cost after incentives
+  co2Saved        Float    // annual CO2 saved in kg
+  treesEquivalent Float?   // equivalent trees planted per year
+  roiPercent      Float?   // return on investment percentage
+  confidence      Float?   // estimate confidence 0-100
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model Installer {
+  id          String   @id @default(cuid())
+  name        String
+  company     String?
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  rating      Float?   // 0-5 average rating
+  reviewCount Int      @default(0)
+  pricePerWatt Float?  // average price per watt
+  warranty    Int?     // warranty years
+  yearsInBusiness Int?
+  licensed    Boolean  @default(true)
+  insured     Boolean  @default(true)
+  certifications String[]
+  serviceAreas   String[]  // zip codes or regions served
+  logoUrl     String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quotes Quote[]
+
+  @@index([rating])
+  @@index([city])
+  @@index([active])
+  @@index([state, active])
+}
+
+model Quote {
+  id            String      @id @default(cuid())
+  status        QuoteStatus @default(PENDING)
+  systemSize    Float?      // kW
+  panelCount    Int?
+  panelBrand    String?
+  inverterBrand String?
+  totalPrice    Float?
+  pricePerWatt  Float?
+  warranty      Int?        // years
+  installDate   DateTime?
+  validUntil    DateTime?
+  proposalUrl   String?     // PDF proposal link
+  notes         String?     @db.Text
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  installerId String
+  installer   Installer @relation(fields: [installerId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([installerId])
+  @@index([status])
+  @@index([userId, status])
+}

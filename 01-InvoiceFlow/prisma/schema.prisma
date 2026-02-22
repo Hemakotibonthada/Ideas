@@ -1,0 +1,342 @@
+// Prisma Schema for InvoiceFlow - Enterprise Invoice & Billing SaaS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTH MODELS ====================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== CORE MODELS ====================
+
+model User {
+  id              String    @id @default(cuid())
+  name            String?
+  email           String    @unique
+  emailVerified   DateTime?
+  image           String?
+  hashedPassword  String?
+  phone           String?
+  role            UserRole  @default(OWNER)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  accounts        Account[]
+  sessions        Session[]
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  organizationId  String?
+  invoicesCreated Invoice[]
+  activities      Activity[]
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  logo            String?
+  email           String?
+  phone           String?
+  website         String?
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  country         String   @default("US")
+  taxId           String?
+  currency        String   @default("USD")
+  invoicePrefix   String   @default("INV")
+  nextInvoiceNum  Int      @default(1001)
+  paymentTerms    Int      @default(30)
+  lateFeePct      Float    @default(0)
+  notes           String?  @db.Text
+  stripeAccountId String?
+  plan            Plan     @default(FREE)
+  planExpiresAt   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  users           User[]
+  clients         Client[]
+  invoices        Invoice[]
+  products        Product[]
+  taxes           Tax[]
+  categories      Category[]
+  recurringInvoices RecurringInvoice[]
+
+  @@index([slug])
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// ==================== BUSINESS MODELS ====================
+
+model Client {
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String?
+  company        String?
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String   @default("US")
+  taxId          String?
+  notes          String?  @db.Text
+  isActive       Boolean  @default(true)
+  totalBilled    Float    @default(0)
+  totalPaid      Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  invoices       Invoice[]
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?  @db.Text
+  unitPrice      Float
+  unit           String   @default("unit")
+  sku            String?
+  isActive       Boolean  @default(true)
+  category       Category? @relation(fields: [categoryId], references: [id])
+  categoryId     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  invoiceItems   InvoiceItem[]
+
+  @@index([organizationId])
+}
+
+model Category {
+  id             String   @id @default(cuid())
+  name           String
+  color          String   @default("#3b82f6")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  products       Product[]
+
+  @@index([organizationId])
+}
+
+model Tax {
+  id             String   @id @default(cuid())
+  name           String
+  rate           Float
+  isDefault      Boolean  @default(false)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  invoiceItems   InvoiceItem[]
+
+  @@index([organizationId])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String
+  status          InvoiceStatus @default(DRAFT)
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  paidDate        DateTime?
+  subtotal        Float         @default(0)
+  taxAmount       Float         @default(0)
+  discount        Float         @default(0)
+  discountType    DiscountType  @default(FIXED)
+  total           Float         @default(0)
+  amountPaid      Float         @default(0)
+  amountDue       Float         @default(0)
+  currency        String        @default("USD")
+  notes           String?       @db.Text
+  terms           String?       @db.Text
+  footerNote      String?
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  publicToken     String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  client          Client        @relation(fields: [clientId], references: [id])
+  clientId        String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+  createdById     String
+  items           InvoiceItem[]
+  payments        Payment[]
+  activities      Activity[]
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId])
+  @@index([clientId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum DiscountType {
+  FIXED
+  PERCENTAGE
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Float    @default(1)
+  unitPrice   Float
+  amount      Float
+  taxAmount   Float    @default(0)
+  sortOrder   Int      @default(0)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  product     Product? @relation(fields: [productId], references: [id])
+  productId   String?
+  tax         Tax?     @relation(fields: [taxId], references: [id])
+  taxId       String?
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  amount        Float
+  method        PaymentMethod @default(BANK_TRANSFER)
+  reference     String?
+  notes         String?
+  paidAt        DateTime      @default(now())
+  stripePaymentId String?
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId     String
+  createdAt     DateTime      @default(now())
+
+  @@index([invoiceId])
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  BANK_TRANSFER
+  CREDIT_CARD
+  PAYPAL
+  STRIPE
+  OTHER
+}
+
+model RecurringInvoice {
+  id             String            @id @default(cuid())
+  frequency      RecurringFrequency
+  nextDate       DateTime
+  endDate        DateTime?
+  isActive       Boolean           @default(true)
+  templateData   Json
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([organizationId])
+  @@index([nextDate])
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  message   String
+  metadata  Json?
+  createdAt DateTime     @default(now())
+  user      User?        @relation(fields: [userId], references: [id])
+  userId    String?
+  invoice   Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String?
+
+  @@index([invoiceId])
+  @@index([userId])
+}
+
+enum ActivityType {
+  INVOICE_CREATED
+  INVOICE_SENT
+  INVOICE_VIEWED
+  INVOICE_PAID
+  INVOICE_OVERDUE
+  PAYMENT_RECEIVED
+  CLIENT_CREATED
+  REMINDER_SENT
+}

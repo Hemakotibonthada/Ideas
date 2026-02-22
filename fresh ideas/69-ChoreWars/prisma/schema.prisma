@@ -1,0 +1,165 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum ChoreFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  AS_NEEDED
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+  CHILD
+}
+
+enum RewardStatus {
+  AVAILABLE
+  CLAIMED
+  FULFILLED
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id          String             @id @default(cuid())
+  email       String             @unique
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  memberships HouseholdMember[]
+  choreLogs   ChoreLog[]
+  rewards     Reward[]           @relation("ClaimedRewards")
+
+  @@index([email])
+}
+
+model Household {
+  id        String             @id @default(cuid())
+  name      String
+  code      String             @unique // join code
+  imageUrl  String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  members   HouseholdMember[]
+  chores    Chore[]
+  rewards   Reward[]
+
+  @@index([code])
+}
+
+model HouseholdMember {
+  id          String     @id @default(cuid())
+  householdId String
+  userId      String
+  role        MemberRole @default(MEMBER)
+  xp          Int        @default(0)
+  level       Int        @default(1)
+  totalPoints Int        @default(0)
+  streak      Int        @default(0)
+  bestStreak  Int        @default(0)
+  joinedAt    DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assigned  Chore[]   @relation("AssignedChores")
+
+  @@unique([householdId, userId])
+  @@index([householdId])
+  @@index([userId])
+  @@index([xp(sort: Desc)])
+  @@index([level(sort: Desc)])
+  @@index([householdId, xp(sort: Desc)])
+}
+
+model Chore {
+  id          String         @id @default(cuid())
+  householdId String
+  assigneeId  String?
+  name        String
+  description String?
+  points      Int
+  frequency   ChoreFrequency
+  dueDate     DateTime?
+  completed   Boolean        @default(false)
+  completedAt DateTime?
+  icon        String?
+  difficulty  Int            @default(1) // 1-5
+  timeEstimate Int?          // minutes
+  recurring   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  household Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  assignee  HouseholdMember? @relation("AssignedChores", fields: [assigneeId], references: [id])
+  logs      ChoreLog[]
+
+  @@index([householdId])
+  @@index([assigneeId])
+  @@index([completed])
+  @@index([frequency])
+  @@index([dueDate])
+  @@index([householdId, completed])
+  @@index([householdId, frequency])
+}
+
+model ChoreLog {
+  id          String   @id @default(cuid())
+  choreId     String
+  completedBy String
+  date        DateTime @default(now())
+  verified    Boolean  @default(false)
+  verifiedBy  String?
+  pointsEarned Int
+  timeSpent   Int?     // minutes
+  photo       String?
+  notes       String?
+  bonusPoints Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  chore     Chore @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  completedByUser User @relation(fields: [completedBy], references: [id])
+
+  @@index([choreId])
+  @@index([completedBy])
+  @@index([date(sort: Desc)])
+  @@index([choreId, date(sort: Desc)])
+  @@index([verified])
+}
+
+model Reward {
+  id          String       @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  cost        Int          // points
+  icon        String?
+  imageUrl    String?
+  status      RewardStatus @default(AVAILABLE)
+  claimedById String?
+  claimedAt   DateTime?
+  fulfilledAt DateTime?
+  quantity    Int          @default(1)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  claimedBy User?     @relation("ClaimedRewards", fields: [claimedById], references: [id])
+
+  @@index([householdId])
+  @@index([status])
+  @@index([cost])
+  @@index([householdId, status])
+}

@@ -1,0 +1,271 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum NodeType {
+  WAREHOUSE
+  DARK_STORE
+  THREE_PL
+  DROP_SHIP
+  STORE_PICKUP
+}
+
+enum ShipmentStatus {
+  PENDING
+  PICKING
+  PACKED
+  LABEL_CREATED
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED
+  RETURNED
+}
+
+enum SplitStrategy {
+  COST_OPTIMAL
+  SPEED_OPTIMAL
+  BALANCED
+  SINGLE_NODE
+}
+
+enum Platform {
+  SHOPIFY
+  WOOCOMMERCE
+  MAGENTO
+  BIGCOMMERCE
+  CUSTOM
+}
+
+// ─── Organization ────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  stores           Store[]
+  fulfillmentNodes FulfillmentNode[]
+
+  @@map("organizations")
+}
+
+// ─── User ────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  avatarUrl      String?
+  role           String   @default("MEMBER") // OWNER, ADMIN, MEMBER, VIEWER
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+// ─── Store ───────────────────────────────────────────────
+
+model Store {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  platform       Platform
+  storeUrl       String?
+  apiKey         String?  // Encrypted
+  apiSecret      String?  // Encrypted
+  webhookSecret  String?
+  isActive       Boolean  @default(true)
+  lastSyncAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@unique([organizationId, name])
+  @@map("stores")
+}
+
+// ─── FulfillmentNode ─────────────────────────────────────
+
+model FulfillmentNode {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  type           NodeType
+  addressLine1   String
+  addressLine2   String?
+  city           String
+  state          String?
+  postalCode     String
+  country        String   @default("US")
+  lat            Float
+  lng            Float
+  capabilities   Json?    // e.g. {refrigerated: true, hazmat: false, maxWeight: 50}
+  isActive       Boolean  @default(true)
+  cutoffTime     String?  // Daily cutoff for same-day shipping, e.g. "14:00"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inventory    Inventory[]
+  shipments    Shipment[]
+
+  @@unique([organizationId, name])
+  @@map("fulfillment_nodes")
+}
+
+// ─── Inventory ───────────────────────────────────────────
+
+model Inventory {
+  id                String   @id @default(cuid())
+  sku               String
+  fulfillmentNodeId String
+  productName       String?
+  quantity          Int      @default(0)
+  reservedQty       Int      @default(0)
+  reorderPoint      Int?     // Alert when qty falls below this
+  lastCountedAt     DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  fulfillmentNode FulfillmentNode @relation(fields: [fulfillmentNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([sku, fulfillmentNodeId])
+  @@index([sku])
+  @@map("inventory")
+}
+
+// ─── Order ───────────────────────────────────────────────
+
+model Order {
+  id               String   @id @default(cuid())
+  storeId          String
+  externalOrderId  String   // The order ID from Shopify/WooCommerce
+  items            Json     // Array of {sku, name, quantity, price}
+  customerName     String?
+  customerEmail    String?
+  customerAddress  Json     // {line1, line2, city, state, zip, country}
+  totalValue       Float
+  currency         String   @default("USD")
+  status           String   @default("PENDING") // PENDING, SPLITTING, SPLIT, FULFILLED, CANCELLED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  splitDecision SplitDecision?
+  costSaving    CostSaving?
+
+  @@unique([storeId, externalOrderId])
+  @@index([status])
+  @@map("orders")
+}
+
+// ─── SplitDecision ───────────────────────────────────────
+
+model SplitDecision {
+  id                  String        @id @default(cuid())
+  orderId             String        @unique
+  strategy            SplitStrategy
+  selectedNodes       Json          // Array of {nodeId, items, reason}
+  estimatedCost       Float?
+  estimatedDeliveryDays Int?
+  splitCount          Int           @default(1) // Number of packages
+  decisionTimeMs      Int?          // How long the algorithm took
+  reasoning           String?       // AI explanation of why this split was chosen
+  createdAt           DateTime      @default(now())
+
+  order     Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  shipments Shipment[]
+
+  @@map("split_decisions")
+}
+
+// ─── Shipment ────────────────────────────────────────────
+
+model Shipment {
+  id                String         @id @default(cuid())
+  splitDecisionId   String
+  fulfillmentNodeId String
+  items             Json           // Array of {sku, quantity} in this shipment
+  carrier           String?        // e.g. "UPS", "FedEx", "USPS"
+  service           String?        // e.g. "Ground", "2-Day", "Overnight"
+  trackingNumber    String?
+  trackingUrl       String?
+  labelUrl          String?
+  status            ShipmentStatus @default(PENDING)
+  weight            Float?         // In pounds
+  dimensions        Json?          // {length, width, height}
+  shippingCost      Float?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  splitDecision   SplitDecision   @relation(fields: [splitDecisionId], references: [id], onDelete: Cascade)
+  fulfillmentNode FulfillmentNode @relation(fields: [fulfillmentNodeId], references: [id])
+
+  @@index([trackingNumber])
+  @@index([status])
+  @@map("shipments")
+}
+
+// ─── ShippingRate ────────────────────────────────────────
+
+model ShippingRate {
+  id          String   @id @default(cuid())
+  carrier     String
+  service     String
+  origin      String   // Postal code or zone
+  destination String   // Postal code or zone
+  weightMin   Float    // Minimum weight in lbs
+  weightMax   Float    // Maximum weight in lbs
+  cost        Float
+  transitDays Int
+  validFrom   DateTime @default(now())
+  validUntil  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([carrier, origin, destination])
+  @@map("shipping_rates")
+}
+
+// ─── CostSaving ──────────────────────────────────────────
+
+model CostSaving {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  naiveCost     Float    // Cost if shipped from single default location
+  optimizedCost Float    // Cost with SplitShip optimization
+  savedAmount   Float    // naiveCost - optimizedCost
+  savedPercent  Float    // (savedAmount / naiveCost) * 100
+  createdAt     DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("cost_savings")
+}

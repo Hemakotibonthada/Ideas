@@ -1,0 +1,179 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum TravelStyle {
+  BUDGET
+  COMFORT
+  LUXURY
+  ADVENTURE
+  CULTURAL
+  FOODIE
+  FAMILY
+}
+
+enum TripStatus {
+  PLANNING
+  BOOKED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityType {
+  SIGHTSEEING
+  FOOD
+  MUSEUM
+  OUTDOOR
+  SHOPPING
+  NIGHTLIFE
+  TRANSPORT
+  REST
+  WORKSHOP
+}
+
+enum AccommodationType {
+  HOTEL
+  HOSTEL
+  AIRBNB
+  RESORT
+  CAMPING
+  HOMESTAY
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  name         String
+  homeCity     String?
+  travelStyle  TravelStyle @default(COMFORT)
+  dietaryPrefs String[]
+  trips        Trip[]
+  reviews      Review[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Trip {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  destination    String
+  startDate      DateTime        @db.Date
+  endDate        DateTime        @db.Date
+  budget         Float?
+  currency       String          @default("USD")
+  travelers      Int             @default(1)
+  status         TripStatus      @default(PLANNING)
+  itineraries    Itinerary[]
+  accommodations Accommodation[]
+  flights        Flight[]
+  packingLists   PackingList[]
+  expenses       TripExpense[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Itinerary {
+  id         String     @id @default(cuid())
+  tripId     String
+  trip       Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  day        Int
+  date       DateTime   @db.Date
+  activities Activity[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  itineraryId String
+  itinerary   Itinerary    @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  name        String
+  type        ActivityType
+  location    String?
+  startTime   DateTime?
+  endTime     DateTime?
+  cost        Float?
+  bookingUrl  String?
+  notes       String?
+  lat         Float?
+  lng         Float?
+  createdAt   DateTime     @default(now())
+}
+
+model Accommodation {
+  id           String            @id @default(cuid())
+  tripId       String
+  trip         Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name         String
+  type         AccommodationType
+  address      String
+  checkIn      DateTime
+  checkOut     DateTime
+  costPerNight Float
+  bookingRef   String?
+  confirmed    Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Flight {
+  id               String   @id @default(cuid())
+  tripId           String
+  trip             Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  airline          String
+  flightNumber     String
+  departure        DateTime
+  arrival          DateTime
+  departureAirport String
+  arrivalAirport   String
+  cost             Float?
+  bookingRef       String?
+  seatNumber       String?
+  createdAt        DateTime @default(now())
+}
+
+model PackingList {
+  id        String   @id @default(cuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  items     Json
+  packed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TripExpense {
+  id       String   @id @default(cuid())
+  tripId   String
+  trip     Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  title    String
+  amount   Float
+  category String
+  date     DateTime @db.Date
+  paidBy   String
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destination String
+  rating      Int
+  title       String
+  text        String
+  tips        String?
+  visitedAt   DateTime
+  createdAt   DateTime @default(now())
+}

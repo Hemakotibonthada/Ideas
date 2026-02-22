@@ -1,0 +1,189 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum Species {
+  DOG
+  CAT
+  BIRD
+  RABBIT
+  HAMSTER
+  FISH
+  REPTILE
+  HORSE
+  OTHER
+}
+
+enum ActivityType {
+  WALK
+  RUN
+  PLAY
+  SWIM
+  TRAINING
+  GROOMING
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  TREAT
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pets      Pet[]
+}
+
+model Pet {
+  id          String    @id @default(cuid())
+  userId      String
+  name        String
+  species     Species
+  breed       String?
+  dateOfBirth DateTime?
+  weight      Float?
+  photoUrl    String?
+  microchipId String?
+  allergies   String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vetVisits    VetVisit[]
+  vaccinations Vaccination[]
+  medications  Medication[]
+  mealLogs     MealLog[]
+  weightLogs   WeightLog[]
+  activities   Activity[]
+
+  @@index([userId])
+}
+
+model VetVisit {
+  id            String    @id @default(cuid())
+  petId         String
+  vetName       String
+  clinic        String?
+  date          DateTime
+  reason        String
+  diagnosis     String?
+  treatment     String?
+  cost          Float?
+  nextVisitDate DateTime?
+  notes         String?
+  attachments   String[]
+  createdAt     DateTime  @default(now())
+
+  pet           Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([date])
+}
+
+model Vaccination {
+  id          String    @id @default(cuid())
+  petId       String
+  name        String
+  dateGiven   DateTime
+  expiryDate  DateTime?
+  vetName     String?
+  batchNumber String?
+  nextDueDate DateTime?
+  createdAt   DateTime  @default(now())
+
+  pet         Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([nextDueDate])
+}
+
+model Medication {
+  id            String   @id @default(cuid())
+  petId         String
+  name          String
+  dosage        String
+  frequency     String
+  startDate     DateTime
+  endDate       DateTime?
+  reminderTimes String[]
+  sideEffects   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pet           Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+}
+
+model MealLog {
+  id       String   @id @default(cuid())
+  petId    String
+  food     String
+  amount   Float
+  unit     String
+  mealType MealType
+  date     DateTime @default(now())
+  notes    String?
+
+  pet      Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([date])
+}
+
+model WeightLog {
+  id     String   @id @default(cuid())
+  petId  String
+  weight Float
+  date   DateTime @default(now())
+  notes  String?
+
+  pet    Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([date])
+}
+
+model Activity {
+  id           String       @id @default(cuid())
+  petId        String
+  type         ActivityType
+  durationMins Int
+  distance     Float?
+  calories     Float?
+  date         DateTime     @default(now())
+  notes        String?
+
+  pet          Pet          @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([date])
+}
+
+model BreedAlert {
+  id             String   @id @default(cuid())
+  breed          String
+  condition      String
+  description    String
+  symptoms       String[]
+  preventionTips String[]
+  createdAt      DateTime @default(now())
+
+  @@index([breed])
+}

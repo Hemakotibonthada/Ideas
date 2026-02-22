@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum Chronotype {
+  LION
+  BEAR
+  WOLF
+  DOLPHIN
+}
+
+enum SensorType {
+  MOVEMENT
+  SOUND
+  LIGHT
+  HEART_RATE
+}
+
+enum RecommendationType {
+  BEDTIME_SHIFT
+  LIGHT_EXPOSURE
+  CAFFEINE_CUTOFF
+  TEMPERATURE
+  SCREEN_TIME
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  name             String
+  timezone         String           @default("UTC")
+  targetSleepHours Float            @default(8)
+  chronotype       Chronotype       @default(BEAR)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  sleepSessions    SleepSession[]
+  sleepGoals       SleepGoal[]
+  recommendations  Recommendation[]
+  alarmConfig      AlarmConfig?
+}
+
+model SleepSession {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bedtime       DateTime
+  wakeTime      DateTime
+  duration      Float        // hours
+  quality       Int          // 1-10
+  sleepScore    Int
+  deepSleepMins Int
+  remSleepMins  Int
+  lightSleepMins Int
+  awakenings    Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  sensorData    SensorData[]
+
+  @@index([userId, bedtime])
+}
+
+model SensorData {
+  id        String     @id @default(cuid())
+  sessionId String
+  session   SleepSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      SensorType
+  values    Json
+  timestamp DateTime
+
+  @@index([sessionId, type])
+}
+
+model SleepGoal {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetBedtime  String   // e.g. "22:30"
+  targetWakeTime String   // e.g. "06:30"
+  targetHours    Float
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, active])
+}
+
+model Recommendation {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      RecommendationType
+  message   String
+  priority  Int                @default(0)
+  appliedAt DateTime?
+  createdAt DateTime           @default(now())
+
+  @@index([userId, type])
+}
+
+model AlarmConfig {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  smartAlarmEnabled Boolean @default(true)
+  windowMinutes     Int     @default(30)
+  sound             String  @default("gentle_rise")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

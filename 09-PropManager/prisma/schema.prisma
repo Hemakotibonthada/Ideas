@@ -1,0 +1,302 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String?
+  name           String?
+  phone          String?
+  role           String   @default("LANDLORD") // ADMIN, LANDLORD, MANAGER, TENANT
+  createdAt      DateTime @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  currency     String   @default("USD")
+  createdAt    DateTime @default(now())
+  users        User[]
+  properties   Property[]
+  tenants      Tenant[]
+  vendors      Vendor[]
+}
+
+// ==================== PROPERTY MANAGEMENT ====================
+
+model Property {
+  id             String       @id @default(cuid())
+  name           String
+  type           PropertyType
+  address        String
+  city           String
+  state          String?
+  zipCode        String?
+  country        String       @default("US")
+  latitude       Float?
+  longitude      Float?
+  yearBuilt      Int?
+  totalArea      Float?       // sqft
+  lotSize        Float?
+  floors         Int?
+  parkingSpaces  Int?
+  description    String?      @db.Text
+  images         Json?        // ["url1", "url2"]
+  amenities      Json?        // ["pool", "gym", "laundry"]
+  purchasePrice  Float?
+  purchaseDate   DateTime?
+  marketValue    Float?
+  mortgageAmount Float?
+  monthlyMortgage Float?
+  insuranceAmount Float?
+  taxAmount      Float?       // annual
+  status         String       @default("ACTIVE") // ACTIVE, VACANT, UNDER_MAINTENANCE, SOLD
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  units          Unit[]
+  documents      PropertyDocument[]
+  expenses       Expense[]
+
+  @@index([organizationId])
+}
+
+enum PropertyType {
+  SINGLE_FAMILY
+  MULTI_FAMILY
+  APARTMENT
+  CONDO
+  TOWNHOUSE
+  COMMERCIAL
+  MIXED_USE
+  LAND
+  OTHER
+}
+
+model Unit {
+  id           String   @id @default(cuid())
+  unitNumber   String   // "101", "A", "Suite 200"
+  floor        Int?
+  bedrooms     Int?
+  bathrooms    Float?
+  area         Float?   // sqft
+  rentAmount   Float    @default(0)
+  depositAmount Float?
+  isAvailable  Boolean  @default(true)
+  features     Json?    // ["washer/dryer", "balcony"]
+  images       Json?
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId   String
+  leases       Lease[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@unique([propertyId, unitNumber])
+  @@index([propertyId])
+  @@index([isAvailable])
+}
+
+// ==================== TENANTS & LEASES ====================
+
+model Tenant {
+  id             String   @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  dateOfBirth    DateTime?
+  ssn            String?  // encrypted
+  employerName   String?
+  monthlyIncome  Float?
+  emergencyContact String?
+  emergencyPhone String?
+  documents      Json?    // uploaded docs
+  status         String   @default("ACTIVE") // ACTIVE, PAST, APPLICANT
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  leases         Lease[]
+  payments       Payment[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Lease {
+  id            String      @id @default(cuid())
+  startDate     DateTime
+  endDate       DateTime
+  rentAmount    Float
+  depositAmount Float       @default(0)
+  depositPaid   Float       @default(0)
+  paymentDay    Int         @default(1) // day of month
+  lateFeeDays   Int         @default(5) // grace period
+  lateFeeAmount Float       @default(0)
+  status        LeaseStatus @default(ACTIVE)
+  terms         String?     @db.Text
+  renewalDate   DateTime?
+  moveInDate    DateTime?
+  moveOutDate   DateTime?
+  createdAt     DateTime    @default(now())
+  unit          Unit        @relation(fields: [unitId], references: [id])
+  unitId        String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  tenantId      String
+  payments      Payment[]
+  documents     LeaseDocument[]
+
+  @@index([unitId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  RENEWED
+}
+
+// ==================== PAYMENTS ====================
+
+model Payment {
+  id          String        @id @default(cuid())
+  amount      Float
+  type        PaymentType
+  method      String        @default("ONLINE") // ONLINE, CHECK, CASH, ACH
+  status      String        @default("COMPLETED") // PENDING, COMPLETED, FAILED, REFUNDED
+  dueDate     DateTime?
+  paidDate    DateTime      @default(now())
+  reference   String?
+  notes       String?
+  lateFee     Float         @default(0)
+  stripePaymentId String?
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  tenantId    String
+  lease       Lease?        @relation(fields: [leaseId], references: [id])
+  leaseId     String?
+  createdAt   DateTime      @default(now())
+
+  @@index([tenantId])
+  @@index([leaseId])
+}
+
+enum PaymentType {
+  RENT
+  DEPOSIT
+  LATE_FEE
+  MAINTENANCE
+  UTILITY
+  OTHER
+}
+
+// ==================== MAINTENANCE ====================
+
+model MaintenanceRequest {
+  id          String              @id @default(cuid())
+  title       String
+  description String              @db.Text
+  category    MaintenanceCategory
+  priority    String              @default("MEDIUM") // LOW, MEDIUM, HIGH, EMERGENCY
+  status      String              @default("OPEN")   // OPEN, IN_PROGRESS, COMPLETED, CANCELLED
+  images      Json?
+  estimatedCost Float?
+  actualCost  Float?
+  scheduledDate DateTime?
+  completedDate DateTime?
+  notes       String?
+  unit        Unit                @relation(fields: [unitId], references: [id])
+  unitId      String
+  tenant      Tenant?             @relation(fields: [tenantId], references: [id])
+  tenantId    String?
+  vendor      Vendor?             @relation(fields: [vendorId], references: [id])
+  vendorId    String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([unitId])
+  @@index([status])
+}
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  APPLIANCE
+  STRUCTURAL
+  PEST_CONTROL
+  LANDSCAPING
+  CLEANING
+  PAINTING
+  FLOORING
+  GENERAL
+  OTHER
+}
+
+model Vendor {
+  id             String   @id @default(cuid())
+  name           String
+  company        String?
+  email          String?
+  phone          String?
+  specialty      String?  // Plumbing, Electrical, etc.
+  hourlyRate     Float?
+  rating         Int?
+  isActive       Boolean  @default(true)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  maintenanceRequests MaintenanceRequest[]
+
+  @@index([organizationId])
+}
+
+// ==================== EXPENSES & DOCUMENTS ====================
+
+model Expense {
+  id          String   @id @default(cuid())
+  title       String
+  amount      Float
+  category    String   // mortgage, insurance, repair, utility, tax, management, other
+  date        DateTime @default(now())
+  receipt     String?
+  notes       String?
+  isRecurring Boolean  @default(false)
+  property    Property @relation(fields: [propertyId], references: [id])
+  propertyId  String
+  createdAt   DateTime @default(now())
+
+  @@index([propertyId])
+  @@index([category])
+}
+
+model PropertyDocument {
+  id         String   @id @default(cuid())
+  name       String
+  type       String   // DEED, INSURANCE, TAX, INSPECTION, PHOTO, OTHER
+  url        String
+  property   Property @relation(fields: [propertyId], references: [id])
+  propertyId String
+  uploadedAt DateTime @default(now())
+}
+
+model LeaseDocument {
+  id         String   @id @default(cuid())
+  name       String
+  type       String   // LEASE_AGREEMENT, ADDENDUM, NOTICE, OTHER
+  url        String
+  lease      Lease    @relation(fields: [leaseId], references: [id])
+  leaseId    String
+  uploadedAt DateTime @default(now())
+}

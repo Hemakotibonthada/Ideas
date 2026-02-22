@@ -1,0 +1,199 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  ATTORNEY
+  REVIEWER
+}
+
+enum ContractType {
+  NDA
+  MSA
+  SOW
+  SLA
+  DPA
+  EMPLOYMENT
+  VENDOR
+  LICENSE
+}
+
+enum ContractStatus {
+  UPLOADED
+  ANALYZING
+  IN_REVIEW
+  REVIEWED
+  APPROVED
+  REJECTED
+  SIGNED
+}
+
+enum ClauseType {
+  INDEMNIFICATION
+  LIABILITY_CAP
+  TERMINATION
+  IP_OWNERSHIP
+  CONFIDENTIALITY
+  GOVERNING_LAW
+  FORCE_MAJEURE
+  DATA_PROTECTION
+  PAYMENT_TERMS
+  NON_COMPETE
+  AUTO_RENEWAL
+  WARRANTY
+}
+
+enum ClauseVerdict {
+  ACCEPTABLE
+  RISKY
+  UNACCEPTABLE
+  NEEDS_EDIT
+}
+
+enum ReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+// ── Models ────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users                  User[]
+  contracts              Contract[]
+  playbooks              Playbook[]
+  negotiationPrecedents  NegotiationPrecedent[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String       @unique
+  name           String
+  role           Role         @default(REVIEWER)
+  avatarUrl      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  reviewSessions ReviewSession[]
+}
+
+model Contract {
+  id              String         @id @default(cuid())
+  organizationId  String
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title           String
+  counterparty    String
+  type            ContractType
+  status          ContractStatus @default(UPLOADED)
+  originalFileUrl String
+  redlinedFileUrl String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  clauses        Clause[]
+  reviewSessions ReviewSession[]
+}
+
+model Clause {
+  id           String     @id @default(cuid())
+  contractId   String
+  contract     Contract   @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  clauseType   ClauseType
+  originalText String
+  position     Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  annotations ClauseAnnotation[]
+}
+
+model ClauseAnnotation {
+  id              String       @id @default(cuid())
+  clauseId        String
+  clause          Clause       @relation(fields: [clauseId], references: [id], onDelete: Cascade)
+  verdict         ClauseVerdict
+  suggestedEdit   String?
+  reasoning       String?
+  confidence      Float?
+  isHumanOverride Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Playbook {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  rules PlaybookRule[]
+}
+
+model PlaybookRule {
+  id             String     @id @default(cuid())
+  playbookId     String
+  playbook       Playbook   @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  clauseType     ClauseType
+  condition      String
+  requiredAction String
+  priority       Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model NegotiationPrecedent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clauseType     ClauseType
+  originalText   String
+  finalText      String
+  counterparty   String
+  outcome        String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model ReviewSession {
+  id             String       @id @default(cuid())
+  contractId     String
+  contract       Contract     @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  reviewerId     String
+  reviewer       User         @relation(fields: [reviewerId], references: [id])
+  status         ReviewStatus @default(PENDING)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  totalClauses   Int          @default(0)
+  flaggedClauses Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}

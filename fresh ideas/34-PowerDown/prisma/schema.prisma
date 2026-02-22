@@ -1,0 +1,172 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Enums ──────────────────────────────────────────────
+
+enum ApplianceType {
+  HVAC
+  WATER_HEATER
+  REFRIGERATOR
+  WASHER
+  DRYER
+  DISHWASHER
+  OVEN
+  LIGHTING
+  TV
+  COMPUTER
+  EV_CHARGER
+  POOL_PUMP
+  OTHER
+}
+
+enum ReadingSource {
+  SMART_METER
+  MANUAL
+  IOT
+}
+
+enum AlertType {
+  HIGH_USAGE
+  UNUSUAL_PATTERN
+  PEAK_HOURS
+  STANDBY_WASTE
+  GOAL_EXCEEDED
+}
+
+// ── Models ─────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String
+  address         String?
+  utilityProvider String?
+  planRate        Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  homes           Home[]
+}
+
+model Home {
+  id             String   @id @default(cuid())
+  userId         String
+  squareFeet     Int?
+  yearBuilt      Int?
+  heatingType    String?
+  coolingType    String?
+  solarInstalled Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appliances      Appliance[]
+  energyReadings  EnergyReading[]
+  dailyUsages     DailyUsage[]
+  solarEstimates  SolarEstimate[]
+  usageAlerts     UsageAlert[]
+
+  @@index([userId])
+}
+
+model Appliance {
+  id                    String        @id @default(cuid())
+  homeId                String
+  name                  String
+  type                  ApplianceType
+  brand                 String?
+  model                 String?
+  wattage               Float?
+  estimatedDailyUseHours Float?
+  estimatedMonthlyCost  Float?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  home                  Home          @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  @@index([homeId])
+}
+
+model EnergyReading {
+  id          String        @id @default(cuid())
+  homeId      String
+  timestamp   DateTime      @default(now())
+  kWh         Float
+  source      ReadingSource @default(MANUAL)
+  temperature Float?
+  cost        Float?
+
+  home        Home          @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  @@index([homeId])
+  @@index([timestamp])
+}
+
+model DailyUsage {
+  id             String   @id @default(cuid())
+  homeId         String
+  date           DateTime
+  totalKWh       Float
+  cost           Float?
+  avgTemperature Float?
+  peakHour       Int?
+  offPeakKWh     Float?
+  peakKWh        Float?
+
+  home           Home     @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  @@unique([homeId, date])
+  @@index([homeId])
+  @@index([date])
+}
+
+model EnergyTip {
+  id                     String   @id @default(cuid())
+  category               String
+  title                  String
+  description            String
+  estimatedSavingPerYear Float?
+  investmentCost         Float?
+  paybackMonths          Int?
+  difficulty             Int?
+  createdAt              DateTime @default(now())
+}
+
+model SolarEstimate {
+  id               String   @id @default(cuid())
+  homeId           String
+  roofArea         Float?
+  sunlightHours    Float?
+  estimatedOutput  Float?
+  estimatedSavings Float?
+  installCost      Float?
+  paybackYears     Float?
+  co2SavedKg       Float?
+  createdAt        DateTime @default(now())
+
+  home             Home     @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  @@index([homeId])
+}
+
+model UsageAlert {
+  id          String    @id @default(cuid())
+  homeId      String
+  type        AlertType
+  message     String
+  threshold   Float?
+  actualValue Float?
+  createdAt   DateTime  @default(now())
+  dismissed   Boolean   @default(false)
+
+  home        Home      @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  @@index([homeId])
+  @@index([createdAt])
+}

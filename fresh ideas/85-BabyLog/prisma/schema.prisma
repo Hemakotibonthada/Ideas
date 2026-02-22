@@ -1,0 +1,191 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum FeedType {
+  BREAST
+  BOTTLE
+  FORMULA
+  SOLID
+}
+
+enum DiaperType {
+  WET
+  DIRTY
+  BOTH
+  DRY
+}
+
+enum MilestoneCategory {
+  MOTOR
+  LANGUAGE
+  SOCIAL
+  COGNITIVE
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum BreastSide {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+enum SleepQuality {
+  POOR
+  FAIR
+  GOOD
+  EXCELLENT
+}
+
+enum SleepLocation {
+  CRIB
+  BASSINET
+  BED
+  SWING
+  CAR_SEAT
+  STROLLER
+  ARMS
+  OTHER
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  timezone  String   @default("UTC")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  babies    Baby[]
+
+  @@index([email])
+}
+
+model Baby {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  birthDate   DateTime
+  gender      Gender?
+  weight      Float?
+  height      Float?
+  bloodType   String?
+  allergies   String[]
+  avatar      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  feedingLogs FeedingLog[]
+  sleepLogs   SleepLog[]
+  diaperLogs  DiaperLog[]
+  milestones  Milestone[]
+  growthEntries GrowthEntry[]
+
+  @@index([userId])
+  @@index([birthDate])
+}
+
+model FeedingLog {
+  id        String     @id @default(cuid())
+  babyId    String
+  baby      Baby       @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  type      FeedType
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int?
+  amount    Float?
+  unit      String?
+  side      BreastSide?
+  food      String?
+  reaction  String?
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  @@index([babyId])
+  @@index([startTime])
+  @@index([type])
+}
+
+model SleepLog {
+  id          String        @id @default(cuid())
+  babyId      String
+  baby        Baby          @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int?
+  quality     SleepQuality?
+  location    SleepLocation?
+  wakings     Int           @default(0)
+  notes       String?
+  createdAt   DateTime      @default(now())
+
+  @@index([babyId])
+  @@index([startTime])
+}
+
+model DiaperLog {
+  id        String     @id @default(cuid())
+  babyId    String
+  baby      Baby       @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  time      DateTime   @default(now())
+  type      DiaperType
+  color     String?
+  rash      Boolean    @default(false)
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  @@index([babyId])
+  @@index([time])
+  @@index([type])
+}
+
+model Milestone {
+  id           String            @id @default(cuid())
+  babyId       String
+  baby         Baby              @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  name         String
+  category     MilestoneCategory
+  achievedDate DateTime?
+  expectedAge  Int?
+  description  String?
+  notes        String?
+  photo        String?
+  createdAt    DateTime          @default(now())
+
+  @@index([babyId])
+  @@index([category])
+  @@index([achievedDate])
+}
+
+model GrowthEntry {
+  id         String   @id @default(cuid())
+  babyId     String
+  baby       Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  date       DateTime
+  weight     Float?
+  height     Float?
+  headCirc   Float?
+  weightPerc Float?
+  heightPerc Float?
+  headPerc   Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([babyId])
+  @@index([date])
+}

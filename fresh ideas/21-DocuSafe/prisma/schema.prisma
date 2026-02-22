@@ -1,0 +1,148 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum DocumentType {
+  PASSPORT
+  DRIVERS_LICENSE
+  INSURANCE
+  TAX_RETURN
+  BIRTH_CERTIFICATE
+  VISA
+  MEDICAL_RECORD
+  CONTRACT
+  RECEIPT
+  CERTIFICATE
+  WARRANTY
+  OTHER
+}
+
+enum AccessLevel {
+  VIEW
+  DOWNLOAD
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String
+  encryptionKeyHash String?
+  plan              String   @default("free")
+  storageUsedBytes  BigInt   @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  documents Document[]
+  folders   Folder[]
+  auditLogs AuditLog[]
+}
+
+model Document {
+  id               String       @id @default(cuid())
+  userId           String
+  title            String
+  type             DocumentType
+  fileUrl          String?
+  encryptedFileUrl String?
+  thumbnailUrl     String?
+  ocrText          String?
+  issuedDate       DateTime?
+  expiryDate       DateTime?
+  isExpired        Boolean      @default(false)
+  tags             String[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiryAlerts    ExpiryAlert[]
+  sharedDocuments SharedDocument[]
+  documentFolders DocumentFolder[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([expiryDate])
+  @@index([isExpired])
+}
+
+model ExpiryAlert {
+  id         String   @id @default(cuid())
+  documentId String
+  alertDate  DateTime
+  sent       Boolean  @default(false)
+  daysBefore Int
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([alertDate])
+  @@index([sent])
+}
+
+model SharedDocument {
+  id          String      @id @default(cuid())
+  documentId  String
+  sharedWith  String
+  accessLevel AccessLevel @default(VIEW)
+  expiresAt   DateTime?
+  accessedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime    @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([sharedWith])
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  parentId  String?
+  color     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent          Folder?          @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children        Folder[]         @relation("FolderHierarchy")
+  documentFolders DocumentFolder[]
+
+  @@index([userId])
+  @@index([parentId])
+}
+
+model DocumentFolder {
+  id         String @id @default(cuid())
+  documentId String
+  folderId   String
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  folder   Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, folderId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  documentId String?
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([timestamp])
+}

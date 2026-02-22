@@ -1,0 +1,163 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum ClothingType {
+  TOP
+  BOTTOM
+  DRESS
+  OUTERWEAR
+  SHOES
+  ACCESSORY
+}
+
+enum Season {
+  SPRING
+  SUMMER
+  FALL
+  WINTER
+  ALL_SEASON
+}
+
+enum Occasion {
+  CASUAL
+  FORMAL
+  BUSINESS
+  SPORT
+  PARTY
+  DATE
+  OUTDOOR
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  avatar    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clothingItems ClothingItem[]
+  outfits       Outfit[]
+  wearLogs      WearLog[]
+  styles        Style[]
+
+  @@index([email])
+}
+
+model ClothingItem {
+  id        String       @id @default(cuid())
+  name      String
+  type      ClothingType
+  color     String
+  secondaryColor String?
+  season    Season[]
+  brand     String?
+  image     String?
+  size      String?
+  material  String?
+  purchased DateTime?
+  price     Float?
+  favorite  Boolean      @default(false)
+  archived  Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  outfitItems OutfitItem[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([userId, type])
+  @@index([color])
+}
+
+model Outfit {
+  id        String    @id @default(cuid())
+  name      String?
+  occasion  Occasion?
+  weather   String?   // e.g., "sunny", "rainy", "cold"
+  rating    Int?      // 1-5 stars
+  notes     String?   @db.Text
+  imageUrl  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items    OutfitItem[]
+  wearLogs WearLog[]
+
+  @@index([userId])
+  @@index([occasion])
+  @@index([userId, occasion])
+}
+
+model OutfitItem {
+  id       String @id @default(cuid())
+  outfitId String
+  itemId   String
+
+  outfit Outfit       @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  item   ClothingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([outfitId, itemId])
+}
+
+model WearLog {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  feedback  String?  @db.Text
+  rating    Int?     // 1-5 comfort/satisfaction
+  weather   String?
+  occasion  String?
+  photoUrl  String?
+  createdAt DateTime @default(now())
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outfitId String
+  outfit   Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+}
+
+model Style {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  colors      String[] // preferred color palette
+  types       ClothingType[]
+  occasions   Occasion[]
+  imageUrl    String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@unique([userId, name])
+}

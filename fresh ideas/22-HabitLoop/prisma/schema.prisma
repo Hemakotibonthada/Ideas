@@ -1,0 +1,195 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum HabitCategory {
+  HEALTH
+  FITNESS
+  MINDFULNESS
+  PRODUCTIVITY
+  LEARNING
+  SOCIAL
+  CREATIVITY
+  FINANCE
+}
+
+enum Frequency {
+  DAILY
+  WEEKDAYS
+  WEEKENDS
+  WEEKLY
+  CUSTOM
+}
+
+enum Mood {
+  GREAT
+  GOOD
+  OKAY
+  LOW
+  BAD
+}
+
+enum NudgeType {
+  MORNING_REMINDER
+  STREAK_WARNING
+  PARTNER_CHECKIN
+  MILESTONE_NEAR
+  MOTIVATION_QUOTE
+}
+
+enum PartnerStatus {
+  PENDING
+  ACTIVE
+  ENDED
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  name                  String
+  timezone              String   @default("UTC")
+  currentStreak         Int      @default(0)
+  longestStreak         Int      @default(0)
+  totalHabitsCompleted  Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  habits              Habit[]
+  nudges              Nudge[]
+  dailyReflections    DailyReflection[]
+  partnershipsAsUser  AccountabilityPartner[] @relation("UserPartnership")
+  partnershipsAsPartner AccountabilityPartner[] @relation("PartnerPartnership")
+}
+
+model Habit {
+  id          String        @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  category    HabitCategory
+  frequency   Frequency     @default(DAILY)
+  targetPerDay Int          @default(1)
+  cue         String?
+  reward      String?
+  color       String?
+  icon        String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitLogs  HabitLog[]
+  streaks    Streak[]
+  partners   AccountabilityPartner[]
+  nudges     Nudge[]
+  milestones Milestone[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([isActive])
+}
+
+model HabitLog {
+  id          String   @id @default(cuid())
+  habitId     String
+  completedAt DateTime @default(now())
+  value       Float?   @default(1)
+  note        String?
+  mood        Mood?
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([habitId])
+  @@index([completedAt])
+}
+
+model Streak {
+  id          String    @id @default(cuid())
+  habitId     String
+  startDate   DateTime
+  endDate     DateTime?
+  currentDays Int       @default(0)
+  isActive    Boolean   @default(true)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([habitId])
+  @@index([isActive])
+}
+
+model AccountabilityPartner {
+  id        String        @id @default(cuid())
+  userId    String
+  partnerId String
+  habitId   String
+  status    PartnerStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user    User  @relation("UserPartnership", fields: [userId], references: [id], onDelete: Cascade)
+  partner User  @relation("PartnerPartnership", fields: [partnerId], references: [id], onDelete: Cascade)
+  habit   Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, partnerId, habitId])
+  @@index([userId])
+  @@index([partnerId])
+}
+
+model Nudge {
+  id             String    @id @default(cuid())
+  userId         String
+  habitId        String
+  type           NudgeType
+  message        String?
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  responseAction String?
+  createdAt      DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([habitId])
+  @@index([scheduledAt])
+}
+
+model Milestone {
+  id         String    @id @default(cuid())
+  habitId    String
+  name       String
+  targetDays Int
+  xpReward   Int       @default(0)
+  unlockedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([habitId])
+}
+
+model DailyReflection {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  overallMood Mood?
+  energyLevel Int?
+  gratitude   String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
